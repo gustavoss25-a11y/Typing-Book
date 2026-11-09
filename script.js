@@ -83,8 +83,13 @@ function renderizarTextoAlvo(digitado) {
     } else if (i === digitado.length) {
       classe += " char-atual";
     }
-    // espaço precisa de um caractere visível para não "sumir" na linha
-    const charVisivel = charAlvo === " " ? "&nbsp;" : escapeHtml(charAlvo);
+    // IMPORTANTE: usar espaço normal aqui, nunca &nbsp;. O &nbsp; é um espaço
+    // "não-quebrável" — ele impede o navegador de quebrar linha naquele ponto,
+    // o que fazia o parágrafo inteiro virar uma única linha gigante (por isso
+    // a tela "andava para a esquerda" ao digitar). Com espaço normal + o
+    // "white-space: pre-wrap" do .texto-alvo no CSS, o texto quebra em várias
+    // linhas normalmente, como um parágrafo de verdade.
+    const charVisivel = escapeHtml(charAlvo);
     html += `<span class="${classe}">${charVisivel}</span>`;
   }
   textoAlvoEl.innerHTML = html;
