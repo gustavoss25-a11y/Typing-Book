@@ -28,6 +28,7 @@ const btnRepetir = document.getElementById("btn-repetir");
 const btnProximo = document.getElementById("btn-proximo");
 
 const btnSom = document.getElementById("btn-som");
+const btnTema = document.getElementById("btn-tema");
 const resultadoTitulo = document.getElementById("resultado-titulo");
 const resultadoRecorde = document.getElementById("resultado-recorde");
 
@@ -195,6 +196,51 @@ function salvarRecordeSeMelhor(id, wpm, precisao) {
 }
 
 // ============================================================================
+// Tema claro/escuro (manual) — fica salvo e não depende do sistema
+// ============================================================================
+// Antes o modo escuro entrava sozinho via "prefers-color-scheme", o que
+// deixava o site escuro sem a pessoa escolher (caso o sistema dela já
+// esteja no escuro). Agora é sempre a pessoa quem decide, com um botão.
+
+function lerPreferenciaTema() {
+  try {
+    const salvo = localStorage.getItem("typingbook_tema");
+    return salvo === "escuro" ? "escuro" : "claro"; // claro por padrão
+  } catch (e) {
+    return "claro";
+  }
+}
+
+function salvarPreferenciaTema(tema) {
+  try {
+    localStorage.setItem("typingbook_tema", tema);
+  } catch (e) {
+    // ignora — preferência é um extra, não essencial
+  }
+}
+
+let temaAtual = lerPreferenciaTema();
+
+function aplicarTema() {
+  if (temaAtual === "escuro") {
+    document.documentElement.setAttribute("data-tema", "escuro");
+  } else {
+    document.documentElement.removeAttribute("data-tema");
+  }
+  btnTema.textContent = temaAtual === "escuro" ? "☀️" : "🌙";
+  btnTema.title = temaAtual === "escuro" ? "Ativar modo claro" : "Ativar modo escuro";
+  btnTema.setAttribute("aria-pressed", temaAtual === "escuro" ? "true" : "false");
+}
+
+btnTema.addEventListener("click", () => {
+  temaAtual = temaAtual === "escuro" ? "claro" : "escuro";
+  salvarPreferenciaTema(temaAtual);
+  aplicarTema();
+});
+
+aplicarTema(); // estado inicial, antes de qualquer outra coisa na tela
+
+// ============================================================================
 // Som de digitação (opcional) — máquina de escrever / teclado mecânico
 // ============================================================================
 // Não usamos arquivo de áudio: o som é sintetizado na hora com a Web Audio
@@ -221,9 +267,10 @@ function salvarPreferenciaSom(ativado) {
 let somAtivado = lerPreferenciaSom();
 
 function atualizarBotaoSom() {
-  btnSom.textContent = somAtivado ? "🔊" : "🔇";
+  // o ícone (teclado com ondinhas / teclado com traço) já troca sozinho
+  // via CSS a partir do aria-pressed — aqui só atualizamos o estado e o título
   btnSom.setAttribute("aria-pressed", somAtivado ? "true" : "false");
-  btnSom.title = somAtivado ? "Desativar som de digitação" : "Ativar som de digitação";
+  btnSom.title = somAtivado ? "Desativar som do teclado" : "Ativar som do teclado";
 }
 
 btnSom.addEventListener("click", () => {
@@ -259,8 +306,11 @@ function obterBufferRuido(ctx) {
   return bufferRuidoClique;
 }
 
-// clique curto: ruído filtrado (textura do "estalo" mecânico) + um "thock"
-// grave de corpo, com pequena variação aleatória para não soar repetitivo
+// toque curto e abafado, tipo tecla de máquina de escrever "suave" — nada
+// de ruído agudo nem de tom com variação brusca de altura (era isso que
+// soava como efeito de videogame antes). Aqui é só um "tum" macio: ruído
+// passado por um filtro passa-baixa (sem agudos) + um corpo grave discreto,
+// com uma pequena variação aleatória a cada tecla pra não ficar repetitivo
 function tocarSomTecla() {
   if (!somAtivado) return;
   try {
@@ -270,25 +320,26 @@ function tocarSomTecla() {
     const fonteRuido = ctx.createBufferSource();
     fonteRuido.buffer = obterBufferRuido(ctx);
     const filtroRuido = ctx.createBiquadFilter();
-    filtroRuido.type = "highpass";
-    filtroRuido.frequency.value = 2200 + Math.random() * 1000;
+    filtroRuido.type = "lowpass";
+    filtroRuido.frequency.value = 650 + Math.random() * 450;
+    filtroRuido.Q.value = 0.5;
     const ganhoRuido = ctx.createGain();
-    ganhoRuido.gain.setValueAtTime(0.22, agora);
-    ganhoRuido.gain.exponentialRampToValueAtTime(0.001, agora + 0.045);
+    ganhoRuido.gain.setValueAtTime(0.10, agora);
+    ganhoRuido.gain.exponentialRampToValueAtTime(0.001, agora + 0.07);
     fonteRuido.connect(filtroRuido).connect(ganhoRuido).connect(ctx.destination);
     fonteRuido.start(agora);
-    fonteRuido.stop(agora + 0.05);
+    fonteRuido.stop(agora + 0.08);
 
     const osc = ctx.createOscillator();
-    osc.type = "triangle";
-    osc.frequency.setValueAtTime(150 + Math.random() * 50, agora);
-    osc.frequency.exponentialRampToValueAtTime(70, agora + 0.03);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(100 + Math.random() * 18, agora);
+    osc.frequency.exponentialRampToValueAtTime(82, agora + 0.05);
     const ganhoOsc = ctx.createGain();
-    ganhoOsc.gain.setValueAtTime(0.16, agora);
-    ganhoOsc.gain.exponentialRampToValueAtTime(0.001, agora + 0.05);
+    ganhoOsc.gain.setValueAtTime(0.08, agora);
+    ganhoOsc.gain.exponentialRampToValueAtTime(0.001, agora + 0.07);
     osc.connect(ganhoOsc).connect(ctx.destination);
     osc.start(agora);
-    osc.stop(agora + 0.06);
+    osc.stop(agora + 0.08);
   } catch (e) {
     // se o áudio falhar por qualquer motivo, a digitação segue normal
   }

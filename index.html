@@ -8,7 +8,23 @@
 </head>
 <body>
 
-  <button id="btn-som" class="btn-som" type="button" aria-pressed="true" title="Desativar som de digitação">🔊</button>
+  <div class="controles-flutuantes">
+    <button id="btn-tema" class="btn-flutuante" type="button" aria-pressed="false" title="Ativar modo escuro">🌙</button>
+    <button id="btn-som" class="btn-flutuante btn-som" type="button" aria-pressed="true" title="Desativar som do teclado">
+      <svg viewBox="0 0 24 24" width="22" height="22" class="icone-som" aria-hidden="true">
+        <rect x="1.5" y="7" width="14" height="10" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <line x1="4.5" y1="10.2" x2="4.5" y2="10.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="8.5" y1="10.2" x2="8.5" y2="10.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="12.5" y1="10.2" x2="12.5" y2="10.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="4.5" y1="13.8" x2="12.5" y2="13.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        <g class="onda-som">
+          <path d="M18.3 8.2 Q20.3 10 18.3 11.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          <path d="M20.5 6.3 Q23.5 10 20.5 13.7" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        </g>
+        <line class="traco-mudo" x1="2.5" y1="19.5" x2="21.5" y2="2.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
 
   <header class="topbar">
     <h1>TypingBook</h1>
