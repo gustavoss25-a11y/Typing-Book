@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TypingBook — leia digitando</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="topbar">
+    <h1>TypingBook</h1>
+    <p class="subtitle">Leia com foco total: digite o texto para avançar.</p>
+  </header>
+
+  <main>
+
+    <!-- TELA 1: escolha do texto -->
+    <section id="tela-selecao" class="tela">
+      <h2>Escolha um texto</h2>
+      <p class="aviso">
+        Os textos abaixo são <strong>exemplos de demonstração</strong> (não são obras literárias reais).
+        Veja no README como trocar por textos reais de domínio público.
+      </p>
+      <div id="lista-textos" class="lista-textos"></div>
+    </section>
+
+    <!-- TELA 2: digitação -->
+    <section id="tela-digitacao" class="tela escondida">
+      <div class="info-texto">
+        <span id="titulo-atual"></span>
+        <button id="btn-voltar" class="btn-link">← escolher outro texto</button>
+      </div>
+
+      <div class="stats-bar">
+        <div class="stat"><span class="stat-valor" id="stat-wpm">0</span><span class="stat-label">PPM</span></div>
+        <div class="stat"><span class="stat-valor" id="stat-precisao">100%</span><span class="stat-label">precisão</span></div>
+        <div class="stat"><span class="stat-valor" id="stat-progresso">0%</span><span class="stat-label">progresso</span></div>
+      </div>
+
+      <div id="texto-alvo" class="texto-alvo" tabindex="0"></div>
+
+      <!-- input invisível que captura o que a pessoa digita -->
+      <textarea id="input-digitacao" class="input-oculto" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
+
+      <p class="dica">Clique no texto acima e comece a digitar. Corrija os erros (backspace) para poder avançar.</p>
+    </section>
+
+    <!-- TELA 3: resultado -->
+    <section id="tela-resultado" class="tela escondida">
+      <h2>Concluído!</h2>
+      <div class="resultado-stats">
+        <div class="resultado-item"><span id="resultado-wpm">0</span><label>palavras por minuto</label></div>
+        <div class="resultado-item"><span id="resultado-precisao">0%</span><label>precisão</label></div>
+        <div class="resultado-item"><span id="resultado-tempo">0s</span><label>tempo</label></div>
+      </div>
+      <div class="botoes-resultado">
+        <button id="btn-repetir">Repetir este texto</button>
+        <button id="btn-proximo">Escolher outro texto</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>Protótipo inicial — feito para uso pessoal, sem cadastro, sem anúncios.</p>
+  </footer>
+
+  <script src="textos.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
