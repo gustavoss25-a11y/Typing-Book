@@ -142,7 +142,11 @@ inputDigitacao.addEventListener("input", () => {
   renderizarTextoAlvo(digitado);
   const { wpm, precisao } = atualizarStats(digitado, Date.now() - inicioEm);
 
-  if (digitado === textoAtual.texto) {
+  // Antes só avançava se "digitado === textoAtual.texto" (tudo 100% certo).
+  // Agora avança assim que a pessoa chega ao final do texto (mesmo tamanho),
+  // independente de ter erros não corrigidos pelo caminho — a precisão%
+  // continua sendo calculada e mostrada normalmente no resultado.
+  if (digitado.length === textoAtual.texto.length) {
     concluido = true;
     const tempoTotalMs = Date.now() - inicioEm;
     finalizarTexto(wpm, precisao, tempoTotalMs);
@@ -306,40 +310,63 @@ function obterBufferRuido(ctx) {
   return bufferRuidoClique;
 }
 
-// toque curto e abafado, tipo tecla de máquina de escrever "suave" — nada
-// de ruído agudo nem de tom com variação brusca de altura (era isso que
-// soava como efeito de videogame antes). Aqui é só um "tum" macio: ruído
-// passado por um filtro passa-baixa (sem agudos) + um corpo grave discreto,
-// com uma pequena variação aleatória a cada tecla pra não ficar repetitivo
+// Toque em duas partes, para lembrar mais de perto uma máquina de escrever
+// mecânica de verdade:
+//   1) "clique" — o estalo seco do mecanismo da tecla armando, um transiente
+//      bem curto e levemente metálico (ruído passado por um filtro passa-faixa
+//      numa frequência média-alta);
+//   2) "baque" — a barra do tipo batendo no rolo/papel, um instante depois,
+//      com corpo mais grave e um pouco mais longo (ruído passa-baixa + um
+//      tom grave curto).
+// As duas partes juntas dão a sensação de "tec-TUM" de uma tecla mecânica,
+// em vez de um único som genérico. Continua tudo suave (sem agudos ásperos,
+// sem variação brusca de tom) e com pequena variação aleatória a cada toque.
 function tocarSomTecla() {
   if (!somAtivado) return;
   try {
     const ctx = obterAudioCtx();
     const agora = ctx.currentTime;
 
-    const fonteRuido = ctx.createBufferSource();
-    fonteRuido.buffer = obterBufferRuido(ctx);
-    const filtroRuido = ctx.createBiquadFilter();
-    filtroRuido.type = "lowpass";
-    filtroRuido.frequency.value = 650 + Math.random() * 450;
-    filtroRuido.Q.value = 0.5;
-    const ganhoRuido = ctx.createGain();
-    ganhoRuido.gain.setValueAtTime(0.10, agora);
-    ganhoRuido.gain.exponentialRampToValueAtTime(0.001, agora + 0.07);
-    fonteRuido.connect(filtroRuido).connect(ganhoRuido).connect(ctx.destination);
-    fonteRuido.start(agora);
-    fonteRuido.stop(agora + 0.08);
+    // 1) clique do mecanismo
+    const fonteClique = ctx.createBufferSource();
+    fonteClique.buffer = obterBufferRuido(ctx);
+    const filtroClique = ctx.createBiquadFilter();
+    filtroClique.type = "bandpass";
+    filtroClique.frequency.value = 2200 + Math.random() * 900;
+    filtroClique.Q.value = 3.2;
+    const ganhoClique = ctx.createGain();
+    ganhoClique.gain.setValueAtTime(0.07, agora);
+    ganhoClique.gain.exponentialRampToValueAtTime(0.001, agora + 0.018);
+    fonteClique.connect(filtroClique).connect(ganhoClique).connect(ctx.destination);
+    fonteClique.start(agora);
+    fonteClique.stop(agora + 0.02);
 
-    const osc = ctx.createOscillator();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(100 + Math.random() * 18, agora);
-    osc.frequency.exponentialRampToValueAtTime(82, agora + 0.05);
-    const ganhoOsc = ctx.createGain();
-    ganhoOsc.gain.setValueAtTime(0.08, agora);
-    ganhoOsc.gain.exponentialRampToValueAtTime(0.001, agora + 0.07);
-    osc.connect(ganhoOsc).connect(ctx.destination);
-    osc.start(agora);
-    osc.stop(agora + 0.08);
+    // 2) baque da barra do tipo no rolo, chega um pouquinho depois do clique
+    const inicioBaque = agora + 0.006 + Math.random() * 0.004;
+
+    const fonteBaque = ctx.createBufferSource();
+    fonteBaque.buffer = obterBufferRuido(ctx);
+    const filtroBaque = ctx.createBiquadFilter();
+    filtroBaque.type = "lowpass";
+    filtroBaque.frequency.value = 550 + Math.random() * 300;
+    filtroBaque.Q.value = 0.6;
+    const ganhoBaque = ctx.createGain();
+    ganhoBaque.gain.setValueAtTime(0.11, inicioBaque);
+    ganhoBaque.gain.exponentialRampToValueAtTime(0.001, inicioBaque + 0.055);
+    fonteBaque.connect(filtroBaque).connect(ganhoBaque).connect(ctx.destination);
+    fonteBaque.start(inicioBaque);
+    fonteBaque.stop(inicioBaque + 0.06);
+
+    const oscBaque = ctx.createOscillator();
+    oscBaque.type = "triangle";
+    oscBaque.frequency.setValueAtTime(150 + Math.random() * 25, inicioBaque);
+    oscBaque.frequency.exponentialRampToValueAtTime(90, inicioBaque + 0.05);
+    const ganhoOscBaque = ctx.createGain();
+    ganhoOscBaque.gain.setValueAtTime(0.06, inicioBaque);
+    ganhoOscBaque.gain.exponentialRampToValueAtTime(0.001, inicioBaque + 0.05);
+    oscBaque.connect(ganhoOscBaque).connect(ctx.destination);
+    oscBaque.start(inicioBaque);
+    oscBaque.stop(inicioBaque + 0.06);
   } catch (e) {
     // se o áudio falhar por qualquer motivo, a digitação segue normal
   }

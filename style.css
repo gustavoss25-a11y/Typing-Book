@@ -2,7 +2,8 @@
   --cor-fundo: #faf8f3;
   --cor-texto: #2b2b28;
   --cor-destaque: #8a5a44;
-  --cor-correto: #3a7d44;
+  --cor-correto: #1b8a4f;
+  --cor-correto-fundo: #e1f5e8;
   --cor-errado: #c0392b;
   --cor-errado-fundo: #fbe3e1;
   --cor-pendente: #8a8a82;
@@ -136,7 +137,7 @@ h2 { font-size: 1.3rem; margin-bottom: 4px; }
   white-space: pre-wrap;
 }
 
-.char-correto { color: var(--cor-correto); }
+.char-correto { color: var(--cor-correto); background: var(--cor-correto-fundo); border-radius: 2px; }
 .char-errado { color: var(--cor-errado); background: var(--cor-errado-fundo); border-radius: 2px; }
 .char-pendente { color: var(--cor-pendente); }
 .char-atual { border-bottom: 2px solid var(--cor-destaque); }
@@ -288,6 +289,8 @@ footer {
   --cor-texto: #ece7da;
   --cor-cartao: #26241f;
   --cor-borda: #3a362c;
+  --cor-correto: #4ade80;
+  --cor-correto-fundo: #1f3b2a;
   --cor-errado-fundo: #3a2320;
   --cor-pendente: #9a9586;
 }
