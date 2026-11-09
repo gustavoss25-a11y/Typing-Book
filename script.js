@@ -28,6 +28,7 @@ const btnRepetir = document.getElementById("btn-repetir");
 const btnProximo = document.getElementById("btn-proximo");
 
 const btnSom = document.getElementById("btn-som");
+const btnAmbiente = document.getElementById("btn-ambiente");
 const btnTema = document.getElementById("btn-tema");
 const resultadoTitulo = document.getElementById("resultado-titulo");
 const resultadoRecorde = document.getElementById("resultado-recorde");
@@ -409,6 +410,161 @@ inputDigitacao.addEventListener("keydown", (ev) => {
   if (TECLAS_SEM_SOM.has(ev.key)) return;
   tocarSomTecla();
 });
+
+// ============================================================================
+// Som ambiente (opcional) — chuva/vento suave, para dar sensação de ambiente
+// ============================================================================
+// Também sintetizado na hora com a Web Audio API (ruído filtrado em loop
+// contínuo e bem baixo), sem nenhum arquivo de áudio. Os navegadores só
+// deixam tocar áudio depois de alguma interação da pessoa com a página —
+// então, se estiver ligado, o som começa sozinho assim que ela clica ou
+// digita pela primeira vez em qualquer lugar do site.
+
+function lerPreferenciaAmbiente() {
+  try {
+    const salvo = localStorage.getItem("typingbook_ambiente_ativado");
+    return salvo === null ? true : salvo === "true"; // ligado por padrão
+  } catch (e) {
+    return true;
+  }
+}
+
+function salvarPreferenciaAmbiente(ativado) {
+  try {
+    localStorage.setItem("typingbook_ambiente_ativado", ativado ? "true" : "false");
+  } catch (e) {
+    // ignora — preferência é um extra, não essencial
+  }
+}
+
+let ambienteAtivado = lerPreferenciaAmbiente();
+let nosAmbiente = null; // nós de áudio do loop de chuva/vento, enquanto está tocando
+
+function atualizarBotaoAmbiente() {
+  // o ícone (nuvem com linhas de vento / nuvem com traço) já troca sozinho
+  // via CSS a partir do aria-pressed — aqui só atualizamos o estado e o título
+  btnAmbiente.setAttribute("aria-pressed", ambienteAtivado ? "true" : "false");
+  btnAmbiente.title = ambienteAtivado ? "Desativar som ambiente" : "Ativar som ambiente";
+}
+
+btnAmbiente.addEventListener("click", () => {
+  ambienteAtivado = !ambienteAtivado;
+  salvarPreferenciaAmbiente(ambienteAtivado);
+  atualizarBotaoAmbiente();
+  if (ambienteAtivado) {
+    iniciarAmbiente();
+  } else {
+    pararAmbiente();
+  }
+});
+
+atualizarBotaoAmbiente(); // estado inicial do botão
+
+function criarBufferRuidoMarrom(ctx, duracaoSeg) {
+  // "ruído marrom": cada amostra é uma pequena variação sobre a anterior
+  // (em vez de totalmente aleatória, como o ruído branco usado no som do
+  // teclado) — isso tira os agudos e deixa um chiado grave e constante,
+  // parecido com chuva ou vento distante.
+  const tamanho = Math.floor(ctx.sampleRate * duracaoSeg);
+  const buffer = ctx.createBuffer(1, tamanho, ctx.sampleRate);
+  const dados = buffer.getChannelData(0);
+  let ultimo = 0;
+  for (let i = 0; i < tamanho; i++) {
+    const branco = Math.random() * 2 - 1;
+    ultimo = (ultimo + 0.02 * branco) / 1.02;
+    dados[i] = ultimo * 3.5; // compensa o volume naturalmente baixo do ruído marrom
+  }
+  return buffer;
+}
+
+function iniciarAmbiente() {
+  if (nosAmbiente || !ambienteAtivado) return;
+  try {
+    const ctx = obterAudioCtx();
+
+    // "chuva": ruído marrom em loop, suavizado por um filtro passa-baixa —
+    // dá a sensação de um chuvisco constante e distante, sem nenhum agudo
+    const fonteChuva = ctx.createBufferSource();
+    fonteChuva.buffer = criarBufferRuidoMarrom(ctx, 4);
+    fonteChuva.loop = true;
+    const filtroChuva = ctx.createBiquadFilter();
+    filtroChuva.type = "lowpass";
+    filtroChuva.frequency.value = 900;
+    const ganhoChuva = ctx.createGain();
+    ganhoChuva.gain.value = 0;
+
+    // "vento": um segundo ruído, filtro passa-faixa largo e um LFO bem lento
+    // que vai variando o volume aos poucos — simula rajadas suaves de vento
+    const fonteVento = ctx.createBufferSource();
+    fonteVento.buffer = criarBufferRuidoMarrom(ctx, 6);
+    fonteVento.loop = true;
+    const filtroVento = ctx.createBiquadFilter();
+    filtroVento.type = "bandpass";
+    filtroVento.frequency.value = 400;
+    filtroVento.Q.value = 0.5;
+    const ganhoVento = ctx.createGain();
+    ganhoVento.gain.value = 0.025; // base constante; o LFO soma rajadas por cima
+
+    const lfo = ctx.createOscillator();
+    lfo.type = "sine";
+    lfo.frequency.value = 0.07; // uma "rajada" a cada ~14s, bem devagar
+    const ganhoLfo = ctx.createGain();
+    ganhoLfo.gain.value = 0.018;
+    lfo.connect(ganhoLfo).connect(ganhoVento.gain);
+
+    const ganhoMestre = ctx.createGain();
+    ganhoMestre.gain.value = 1;
+
+    fonteChuva.connect(filtroChuva).connect(ganhoChuva).connect(ganhoMestre);
+    fonteVento.connect(filtroVento).connect(ganhoVento).connect(ganhoMestre);
+    ganhoMestre.connect(ctx.destination);
+
+    const agora = ctx.currentTime;
+    ganhoChuva.gain.setValueAtTime(0, agora);
+    ganhoChuva.gain.linearRampToValueAtTime(0.05, agora + 1.5); // entra bem devagar
+
+    fonteChuva.start(agora);
+    fonteVento.start(agora);
+    lfo.start(agora);
+
+    nosAmbiente = { fonteChuva, fonteVento, lfo, ganhoMestre, ctx };
+  } catch (e) {
+    // se o som ambiente falhar por qualquer motivo, o resto do site segue normal
+  }
+}
+
+function pararAmbiente() {
+  if (!nosAmbiente) return;
+  try {
+    const { fonteChuva, fonteVento, lfo, ganhoMestre, ctx } = nosAmbiente;
+    const agora = ctx.currentTime;
+    // some suavemente em vez de cortar seco, pra não dar um "clique" no ouvido
+    ganhoMestre.gain.setValueAtTime(ganhoMestre.gain.value, agora);
+    ganhoMestre.gain.linearRampToValueAtTime(0, agora + 0.4);
+    setTimeout(() => {
+      try {
+        fonteChuva.stop();
+        fonteVento.stop();
+        lfo.stop();
+      } catch (e2) {
+        // pode já ter parado sozinho — sem problema
+      }
+    }, 450);
+  } catch (e) {
+    // ignora
+  }
+  nosAmbiente = null;
+}
+
+// tenta iniciar o ambiente assim que a pessoa interagir pela primeira vez
+// com a página (clique ou tecla) — exigência dos navegadores para tocar áudio
+function tentarIniciarAmbienteNaPrimeiraInteracao() {
+  if (ambienteAtivado) iniciarAmbiente();
+  document.removeEventListener("click", tentarIniciarAmbienteNaPrimeiraInteracao);
+  document.removeEventListener("keydown", tentarIniciarAmbienteNaPrimeiraInteracao);
+}
+document.addEventListener("click", tentarIniciarAmbienteNaPrimeiraInteracao);
+document.addEventListener("keydown", tentarIniciarAmbienteNaPrimeiraInteracao);
 
 // --- botões de navegação -------------------------------------------------
 btnVoltar.addEventListener("click", () => {
