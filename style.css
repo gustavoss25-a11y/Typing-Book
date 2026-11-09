@@ -167,6 +167,84 @@ h2 { font-size: 1.3rem; margin-bottom: 4px; }
 
 .botoes-resultado { display: flex; gap: 12px; }
 
+/* --- botão flutuante de som (liga/desliga o clique de digitação) --- */
+.btn-som {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 100;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  line-height: 1;
+  padding: 0;
+  background: var(--cor-cartao);
+  color: var(--cor-texto);
+  border: 1px solid var(--cor-borda);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  transition: box-shadow 0.15s ease, transform 0.15s ease, opacity 0.15s ease;
+}
+
+.btn-som:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(0,0,0,0.12); }
+.btn-som[aria-pressed="false"] { opacity: 0.55; }
+
+/* --- tela de resultado: entrada suave toda vez que ela aparece --- */
+#tela-resultado {
+  animation: entrada-resultado 0.4s ease;
+}
+
+@keyframes entrada-resultado {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.resultado-check { display: flex; justify-content: center; margin-bottom: 4px; }
+.check-svg { width: 64px; height: 64px; }
+
+.check-circulo {
+  stroke: var(--cor-correto);
+  stroke-width: 3;
+  stroke-dasharray: 151;
+  stroke-dashoffset: 151;
+  animation: desenhar-circulo 0.5s ease forwards;
+}
+
+.check-marca {
+  stroke: var(--cor-correto);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 36;
+  stroke-dashoffset: 36;
+  animation: desenhar-marca 0.3s ease forwards 0.45s;
+}
+
+@keyframes desenhar-circulo { to { stroke-dashoffset: 0; } }
+@keyframes desenhar-marca { to { stroke-dashoffset: 0; } }
+
+.resultado-titulo {
+  color: var(--cor-pendente);
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+}
+
+.resultado-recorde {
+  display: inline-block;
+  background: var(--cor-destaque);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: bold;
+  padding: 4px 12px;
+  border-radius: 999px;
+  margin: 0 0 12px;
+}
+
+.resultado-recorde:empty { display: none; }
+
 button {
   font-family: inherit;
   font-size: 0.95rem;

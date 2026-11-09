@@ -8,6 +8,8 @@
 </head>
 <body>
 
+  <button id="btn-som" class="btn-som" type="button" aria-pressed="true" title="Desativar som de digitação">🔊</button>
+
   <header class="topbar">
     <h1>TypingBook</h1>
     <p class="subtitle">Leia com foco total: digite o texto para avançar.</p>
@@ -48,7 +50,15 @@
 
     <!-- TELA 3: resultado -->
     <section id="tela-resultado" class="tela escondida">
+      <div class="resultado-check" aria-hidden="true">
+        <svg viewBox="0 0 52 52" class="check-svg">
+          <circle class="check-circulo" cx="26" cy="26" r="24" fill="none"/>
+          <path class="check-marca" fill="none" d="M14 27 l8 8 l16 -16"/>
+        </svg>
+      </div>
       <h2>Concluído!</h2>
+      <p class="resultado-titulo" id="resultado-titulo"></p>
+      <p class="resultado-recorde" id="resultado-recorde"></p>
       <div class="resultado-stats">
         <div class="resultado-item"><span id="resultado-wpm">0</span><label>palavras por minuto</label></div>
         <div class="resultado-item"><span id="resultado-precisao">0%</span><label>precisão</label></div>
