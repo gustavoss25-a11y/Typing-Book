@@ -1,0 +1,556 @@
+:root {
+  --cor-fundo: #eef6ea;
+  --cor-texto: #27391f;
+  --cor-destaque: #3f7d52;
+  --cor-destaque-forte: #2f6140;
+  --cor-correto: #2fa360;
+  --cor-correto-fundo: #e2f5e6;
+  --cor-errado: #c0392b;
+  --cor-errado-fundo: #fbe3e1;
+  --cor-pendente: #5f7a5a;
+  --cor-cartao: #fdfdf8;
+  --cor-borda: #cfe0c9;
+
+  --fonte-destaque: "Bricolage Grotesque", "Segoe UI", sans-serif;
+  --fonte-leitura: "Source Serif 4", "Georgia", "Times New Roman", serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--fonte-leitura);
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* --- cenário de fundo: céu com nuvens (claro) / céu noturno com estrelas (escuro) ---
+   Fica fixo atrás de todo o conteúdo (z-index negativo), nunca se move nem pisca:
+   é só uma ambientação suave, sem disputar atenção com o texto que a pessoa lê. */
+.cena-fundo {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.camada-floresta {
+  position: absolute;
+  inset: 0;
+  background-image:
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20500%20170%22%3E%3Cellipse%20cx%3D%2241.4%22%20cy%3D%2223.8%22%20rx%3D%225.7%22%20ry%3D%223.2%22%20fill%3D%22%23cf8a3d%22%20opacity%3D%220.46%22%20transform%3D%22rotate%286%2041.4%2023.8%29%22/%3E%3Cellipse%20cx%3D%22227.1%22%20cy%3D%2291.3%22%20rx%3D%225.2%22%20ry%3D%222.9%22%20fill%3D%22%235f9a55%22%20opacity%3D%220.4%22%20transform%3D%22rotate%28207%20227.1%2091.3%29%22/%3E%3Cellipse%20cx%3D%2280.5%22%20cy%3D%2286.8%22%20rx%3D%226.4%22%20ry%3D%223.5%22%20fill%3D%22%237fbf6a%22%20opacity%3D%220.4%22%20transform%3D%22rotate%2890%2080.5%2086.8%29%22/%3E%3Cellipse%20cx%3D%22313.2%22%20cy%3D%2254.9%22%20rx%3D%225.9%22%20ry%3D%223.2%22%20fill%3D%22%235f9a55%22%20opacity%3D%220.53%22%20transform%3D%22rotate%28140%20313.2%2054.9%29%22/%3E%3Cellipse%20cx%3D%22211.5%22%20cy%3D%2214.3%22%20rx%3D%223.6%22%20ry%3D%222.0%22%20fill%3D%22%237fbf6a%22%20opacity%3D%220.57%22%20transform%3D%22rotate%28347%20211.5%2014.3%29%22/%3E%3Cellipse%20cx%3D%22196.9%22%20cy%3D%2242.9%22%20rx%3D%226.7%22%20ry%3D%223.7%22%20fill%3D%22%237fbf6a%22%20opacity%3D%220.63%22%20transform%3D%22rotate%28177%20196.9%2042.9%29%22/%3E%3Cellipse%20cx%3D%22483.8%22%20cy%3D%2216.4%22%20rx%3D%225.2%22%20ry%3D%222.8%22%20fill%3D%22%236fae5f%22%20opacity%3D%220.43%22%20transform%3D%22rotate%28235%20483.8%2016.4%29%22/%3E%3Cellipse%20cx%3D%22454.5%22%20cy%3D%2223.4%22%20rx%3D%223.6%22%20ry%3D%222.0%22%20fill%3D%22%235f9a55%22%20opacity%3D%220.42%22%20transform%3D%22rotate%2897%20454.5%2023.4%29%22/%3E%3Cellipse%20cx%3D%2227.8%22%20cy%3D%2230.4%22%20rx%3D%225.4%22%20ry%3D%222.9%22%20fill%3D%22%236fae5f%22%20opacity%3D%220.46%22%20transform%3D%22rotate%28350%2027.8%2030.4%29%22/%3E%3Cellipse%20cx%3D%22441.6%22%20cy%3D%2293.2%22%20rx%3D%225.8%22%20ry%3D%223.2%22%20fill%3D%22%237fbf6a%22%20opacity%3D%220.53%22%20transform%3D%22rotate%28249%20441.6%2093.2%29%22/%3E%3Cellipse%20cx%3D%22457.6%22%20cy%3D%2247.7%22%20rx%3D%224.8%22%20ry%3D%222.6%22%20fill%3D%22%236fae5f%22%20opacity%3D%220.36%22%20transform%3D%22rotate%28112%20457.6%2047.7%29%22/%3E%3Cellipse%20cx%3D%22316.7%22%20cy%3D%2248.4%22%20rx%3D%226.1%22%20ry%3D%223.3%22%20fill%3D%22%236fae5f%22%20opacity%3D%220.37%22%20transform%3D%22rotate%28115%20316.7%2048.4%29%22/%3E%3Cellipse%20cx%3D%22272.6%22%20cy%3D%2271.3%22%20rx%3D%226.7%22%20ry%3D%223.7%22%20fill%3D%22%237fbf6a%22%20opacity%3D%220.59%22%20transform%3D%22rotate%28265%20272.6%2071.3%29%22/%3E%3Cellipse%20cx%3D%22453.4%22%20cy%3D%2236.7%22%20rx%3D%225.9%22%20ry%3D%223.2%22%20fill%3D%22%235f9a55%22%20opacity%3D%220.63%22%20transform%3D%22rotate%28324%20453.4%2036.7%29%22/%3E%3Crect%20x%3D%225.8%22%20y%3D%22102.1%22%20width%3D%226.1%22%20height%3D%228.3%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.58%22/%3E%3Cpolygon%20points%3D%228.9%2C41.3%20-2.6%2C64.6%2020.3%2C64.6%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.58%22/%3E%3Cpolygon%20points%3D%228.9%2C52.5%20-10.2%2C75.8%2027.9%2C75.8%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.58%22/%3E%3Cpolygon%20points%3D%228.9%2C63.6%20-17.8%2C86.9%2035.5%2C86.9%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.58%22/%3E%3Crect%20x%3D%2264.8%22%20y%3D%2292.8%22%20width%3D%227.0%22%20height%3D%2221.2%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.57%22/%3E%3Ccircle%20cx%3D%2268.3%22%20cy%3D%2274.0%22%20r%3D%2225.1%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.57%22/%3E%3Ccircle%20cx%3D%2254.5%22%20cy%3D%2280.3%22%20r%3D%2217.5%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.57%22/%3E%3Ccircle%20cx%3D%2282.1%22%20cy%3D%2280.3%22%20r%3D%2217.5%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.57%22/%3E%3Crect%20x%3D%22123.3%22%20y%3D%2285.9%22%20width%3D%227.3%22%20height%3D%2223.2%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.69%22/%3E%3Ccircle%20cx%3D%22126.9%22%20cy%3D%2266.3%22%20r%3D%2226.1%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.69%22/%3E%3Ccircle%20cx%3D%22112.5%22%20cy%3D%2272.8%22%20r%3D%2218.3%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.69%22/%3E%3Ccircle%20cx%3D%22141.3%22%20cy%3D%2272.8%22%20r%3D%2218.3%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.69%22/%3E%3Crect%20x%3D%22185.2%22%20y%3D%22106.4%22%20width%3D%224.9%22%20height%3D%228.4%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.56%22/%3E%3Cpolygon%20points%3D%22187.7%2C44.5%20178.5%2C68.2%20196.9%2C68.2%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.56%22/%3E%3Cpolygon%20points%3D%22187.7%2C55.8%20172.3%2C79.6%20203.0%2C79.6%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.56%22/%3E%3Cpolygon%20points%3D%22187.7%2C67.2%20166.2%2C90.9%20209.2%2C90.9%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.56%22/%3E%3Crect%20x%3D%22232.2%22%20y%3D%2292.0%22%20width%3D%224.8%22%20height%3D%2218.3%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.64%22/%3E%3Ccircle%20cx%3D%22234.6%22%20cy%3D%2279.3%22%20r%3D%2217.0%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.64%22/%3E%3Ccircle%20cx%3D%22225.2%22%20cy%3D%2283.6%22%20r%3D%2211.9%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.64%22/%3E%3Ccircle%20cx%3D%22243.9%22%20cy%3D%2283.6%22%20r%3D%2211.9%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.64%22/%3E%3Crect%20x%3D%22290.5%22%20y%3D%22107.7%22%20width%3D%224.4%22%20height%3D%227.3%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.62%22/%3E%3Cpolygon%20points%3D%22292.7%2C54.1%20284.4%2C74.6%20301.0%2C74.6%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.62%22/%3E%3Cpolygon%20points%3D%22292.7%2C63.9%20278.8%2C84.5%20306.6%2C84.5%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.62%22/%3E%3Cpolygon%20points%3D%22292.7%2C73.7%20273.2%2C94.3%20312.1%2C94.3%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.62%22/%3E%3Crect%20x%3D%22348.5%22%20y%3D%2282.6%22%20width%3D%228.4%22%20height%3D%2224.0%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.6%22/%3E%3Ccircle%20cx%3D%22352.7%22%20cy%3D%2260.2%22%20r%3D%2229.9%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.6%22/%3E%3Ccircle%20cx%3D%22336.2%22%20cy%3D%2267.6%22%20r%3D%2221.0%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.6%22/%3E%3Ccircle%20cx%3D%22369.1%22%20cy%3D%2267.6%22%20r%3D%2221.0%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.6%22/%3E%3Crect%20x%3D%22407.1%22%20y%3D%2288.7%22%20width%3D%224.9%22%20height%3D%2218.7%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.57%22/%3E%3Ccircle%20cx%3D%22409.5%22%20cy%3D%2275.5%22%20r%3D%2217.5%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.57%22/%3E%3Ccircle%20cx%3D%22399.9%22%20cy%3D%2279.9%22%20r%3D%2212.3%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.57%22/%3E%3Ccircle%20cx%3D%22419.2%22%20cy%3D%2279.9%22%20r%3D%2212.3%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.57%22/%3E%3Crect%20x%3D%22467.1%22%20y%3D%22101.4%22%20width%3D%223.8%22%20height%3D%226.8%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.58%22/%3E%3Cpolygon%20points%3D%22469.0%2C51.5%20461.9%2C70.6%20476.0%2C70.6%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.58%22/%3E%3Cpolygon%20points%3D%22469.0%2C60.6%20457.2%2C79.7%20480.7%2C79.7%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.58%22/%3E%3Cpolygon%20points%3D%22469.0%2C69.8%20452.5%2C88.9%20485.4%2C88.9%22%20fill%3D%22%239dbf9a%22%20opacity%3D%220.58%22/%3E%3Crect%20x%3D%22-3.8%22%20y%3D%22148.6%22%20width%3D%2210.5%22%20height%3D%2212.5%22%20fill%3D%22%234f7a52%22%20opacity%3D%220.93%22/%3E%3Cpolygon%20points%3D%221.5%2C57.2%20-18.2%2C92.2%2021.2%2C92.2%22%20fill%3D%22%234f7a52%22%20opacity%3D%220.93%22/%3E%3Cpolygon%20points%3D%221.5%2C74.0%20-31.4%2C109.0%2034.4%2C109.0%22%20fill%3D%22%234f7a52%22%20opacity%3D%220.93%22/%3E%3Cpolygon%20points%3D%221.5%2C90.7%20-44.6%2C125.7%2047.5%2C125.7%22%20fill%3D%22%234f7a52%22%20opacity%3D%220.93%22/%3E%3Crect%20x%3D%2255.0%22%20y%3D%22148.4%22%20width%3D%229.2%22%20height%3D%2213.4%22%20fill%3D%22%234f7a52%22%20opacity%3D%220.99%22/%3E%3Cpolygon%20points%3D%2259.6%2C49.9%2042.3%2C87.7%2076.8%2C87.7%22%20fill%3D%22%234f7a52%22%20opacity%3D%220.99%22/%3E%3Cpolygon%20points%3D%2259.6%2C68.0%2030.8%2C105.7%2088.3%2C105.7%22%20fill%3D%22%234f7a52%22%20opacity%3D%220.99%22/%3E%3Cpolygon%20points%3D%2259.6%2C86.0%2019.3%2C123.8%2099.8%2C123.8%22%20fill%3D%22%234f7a52%22%20opacity%3D%220.99%22/%3E%3Crect%20x%3D%22149.7%22%20y%3D%22153.2%22%20width%3D%227.1%22%20height%3D%2210.8%22%20fill%3D%22%234f7a52%22%20opacity%3D%220.92%22/%3E%3Cpolygon%20points%3D%22153.2%2C74.3%20139.9%2C104.5%20166.6%2C104.5%22%20fill%3D%22%234f7a52%22%20opacity%3D%220.92%22/%3E%3Cpolygon%20points%3D%22153.2%2C88.7%20131.0%2C119.0%20175.5%2C119.0%22%20fill%3D%22%234f7a52%22%20opacity%3D%220.92%22/%3E%3Cpolygon%20points%3D%22153.2%2C103.2%20122.1%2C133.5%20184.4%2C133.5%22%20fill%3D%22%234f7a52%22%20opacity%3D%220.92%22/%3E%3Crect%20x%3D%22219.3%22%20y%3D%22146.4%22%20width%3D%228.7%22%20height%3D%2213.5%22%20fill%3D%22%234f7a52%22%20opacity%3D%220.91%22/%3E%3Cpolygon%20points%3D%22223.6%2C47.6%20207.3%2C85.5%20240.0%2C85.5%22%20fill%3D%22%234f7a52%22%20opacity%3D%220.91%22/%3E%3Cpolygon%20points%3D%22223.6%2C65.7%20196.4%2C103.6%20250.9%2C103.6%22%20fill%3D%22%234f7a52%22%20opacity%3D%220.91%22/%3E%3Cpolygon%20points%3D%22223.6%2C83.9%20185.5%2C121.7%20261.8%2C121.7%22%20fill%3D%22%234f7a52%22%20opacity%3D%220.91%22/%3E%3Crect%20x%3D%22292.8%22%20y%3D%22134.8%22%20width%3D%2212.0%22%20height%3D%2230.2%22%20fill%3D%22%234f7a52%22%20opacity%3D%221.0%22/%3E%3Ccircle%20cx%3D%22298.7%22%20cy%3D%22102.7%22%20r%3D%2242.7%22%20fill%3D%22%234f7a52%22%20opacity%3D%221.0%22/%3E%3Ccircle%20cx%3D%22275.3%22%20cy%3D%22113.4%22%20r%3D%2229.9%22%20fill%3D%22%234f7a52%22%20opacity%3D%221.0%22/%3E%3Ccircle%20cx%3D%22322.2%22%20cy%3D%22113.4%22%20r%3D%2229.9%22%20fill%3D%22%234f7a52%22%20opacity%3D%221.0%22/%3E%3Crect%20x%3D%22361.8%22%20y%3D%22147.9%22%20width%3D%229.4%22%20height%3D%2211.1%22%20fill%3D%22%234f7a52%22%20opacity%3D%220.86%22/%3E%3Cpolygon%20points%3D%22366.5%2C66.5%20348.9%2C97.7%20384.2%2C97.7%22%20fill%3D%22%234f7a52%22%20opacity%3D%220.86%22/%3E%3Cpolygon%20points%3D%22366.5%2C81.4%20337.1%2C112.6%20396.0%2C112.6%22%20fill%3D%22%234f7a52%22%20opacity%3D%220.86%22/%3E%3Cpolygon%20points%3D%22366.5%2C96.3%20325.3%2C127.5%20407.8%2C127.5%22%20fill%3D%22%234f7a52%22%20opacity%3D%220.86%22/%3E%3Crect%20x%3D%22443.8%22%20y%3D%22128.1%22%20width%3D%228.7%22%20height%3D%2230.8%22%20fill%3D%22%234f7a52%22%20opacity%3D%220.91%22/%3E%3Ccircle%20cx%3D%22448.1%22%20cy%3D%22104.9%22%20r%3D%2230.9%22%20fill%3D%22%234f7a52%22%20opacity%3D%220.91%22/%3E%3Ccircle%20cx%3D%22431.1%22%20cy%3D%22112.6%22%20r%3D%2221.6%22%20fill%3D%22%234f7a52%22%20opacity%3D%220.91%22/%3E%3Ccircle%20cx%3D%22465.1%22%20cy%3D%22112.6%22%20r%3D%2221.6%22%20fill%3D%22%234f7a52%22%20opacity%3D%220.91%22/%3E%3C/svg%3E"),
+    linear-gradient(180deg, #e9f6e6 0%, #d7edd1 55%, #c3e4bc 100%);
+  background-repeat: repeat-x, no-repeat;
+  background-position: center bottom 60px, top;
+  background-size: 300px 102px, auto;
+}
+
+.camada-estrelas {
+  position: absolute;
+  inset: 0;
+  display: none;
+  background:
+    radial-gradient(circle at 80% 12%, rgba(210, 225, 255, 0.12), rgba(210, 225, 255, 0) 30%),
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20400%20400%22%3E%3Ccircle%20cx%3D%22255.8%22%20cy%3D%2210.0%22%20r%3D%220.83%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.48%22/%3E%3Ccircle%20cx%3D%22294.6%22%20cy%3D%22270.7%22%20r%3D%221.57%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.4%22/%3E%3Ccircle%20cx%3D%22168.8%22%20cy%3D%2211.9%22%20r%3D%220.76%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.65%22/%3E%3Ccircle%20cx%3D%2210.6%22%20cy%3D%2279.5%22%20r%3D%221.28%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.68%22/%3E%3Ccircle%20cx%3D%2288.2%22%20cy%3D%22235.7%22%20r%3D%221.47%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.35%22/%3E%3Ccircle%20cx%3D%22322.3%22%20cy%3D%22279.3%22%20r%3D%220.91%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.44%22/%3E%3Ccircle%20cx%3D%22382.9%22%20cy%3D%22134.6%22%20r%3D%220.61%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.41%22/%3E%3Ccircle%20cx%3D%22339.0%22%20cy%3D%22241.5%22%20r%3D%221.47%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.79%22/%3E%3Ccircle%20cx%3D%22214.5%22%20cy%3D%22389.2%22%20r%3D%220.95%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.68%22/%3E%3Ccircle%20cx%3D%22331.8%22%20cy%3D%22247.4%22%20r%3D%221.53%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.7%22/%3E%3Ccircle%20cx%3D%22281.8%22%20cy%3D%2218.3%22%20r%3D%220.77%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.52%22/%3E%3Ccircle%20cx%3D%2231.9%22%20cy%3D%2293.1%22%20r%3D%220.62%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.52%22/%3E%3Ccircle%20cx%3D%22254.3%22%20cy%3D%22145.9%22%20r%3D%220.94%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.48%22/%3E%3Ccircle%20cx%3D%22106.8%22%20cy%3D%22374.7%22%20r%3D%221.28%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.72%22/%3E%3Ccircle%20cx%3D%2268.5%22%20cy%3D%22291.7%22%20r%3D%220.7%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.58%22/%3E%3Ccircle%20cx%3D%22395.8%22%20cy%3D%22256.0%22%20r%3D%221.17%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.76%22/%3E%3Ccircle%20cx%3D%22337.1%22%20cy%3D%22310.4%22%20r%3D%220.77%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.37%22/%3E%3Ccircle%20cx%3D%22126.2%22%20cy%3D%22107.1%22%20r%3D%220.75%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.92%22/%3E%3Ccircle%20cx%3D%22350.5%22%20cy%3D%22125.9%22%20r%3D%221.29%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.59%22/%3E%3Ccircle%20cx%3D%22365.8%22%20cy%3D%22183.5%22%20r%3D%220.82%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.5%22/%3E%3Ccircle%20cx%3D%22224.5%22%20cy%3D%22105.1%22%20r%3D%221.2%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.89%22/%3E%3Ccircle%20cx%3D%22159.8%22%20cy%3D%2287.7%22%20r%3D%221.7%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.66%22/%3E%3Ccircle%20cx%3D%2236.4%22%20cy%3D%2218.8%22%20r%3D%220.63%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.73%22/%3E%3Ccircle%20cx%3D%22316.8%22%20cy%3D%22168.9%22%20r%3D%220.58%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.58%22/%3E%3Ccircle%20cx%3D%22398.4%22%20cy%3D%22211.6%22%20r%3D%221.67%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.87%22/%3E%3Ccircle%20cx%3D%224.6%22%20cy%3D%22288.3%22%20r%3D%221.32%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.67%22/%3E%3Ccircle%20cx%3D%22106.7%22%20cy%3D%22256.4%22%20r%3D%220.63%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.61%22/%3E%3Ccircle%20cx%3D%22181.5%22%20cy%3D%22381.5%22%20r%3D%221.55%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.51%22/%3E%3Ccircle%20cx%3D%22200.2%22%20cy%3D%2271.5%22%20r%3D%221.6%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.87%22/%3E%3Ccircle%20cx%3D%22119.4%22%20cy%3D%22255.6%22%20r%3D%221.23%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.44%22/%3E%3Ccircle%20cx%3D%22305.0%22%20cy%3D%22215.8%22%20r%3D%221.43%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.67%22/%3E%3Ccircle%20cx%3D%220.2%22%20cy%3D%22129.7%22%20r%3D%220.52%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.91%22/%3E%3Ccircle%20cx%3D%22351.5%22%20cy%3D%22332.7%22%20r%3D%220.87%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.38%22/%3E%3Ccircle%20cx%3D%22351.2%22%20cy%3D%22378.8%22%20r%3D%220.6%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.64%22/%3E%3Ccircle%20cx%3D%2227.7%22%20cy%3D%22304.2%22%20r%3D%221.42%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.43%22/%3E%3Ccircle%20cx%3D%22190.1%22%20cy%3D%22219.9%22%20r%3D%220.82%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.87%22/%3E%3Ccircle%20cx%3D%22169.3%22%20cy%3D%2284.7%22%20r%3D%221.15%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.79%22/%3E%3Ccircle%20cx%3D%2280.5%22%20cy%3D%22124.7%22%20r%3D%221.69%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.74%22/%3E%3Ccircle%20cx%3D%22175.2%22%20cy%3D%22207.0%22%20r%3D%220.65%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.48%22/%3E%3Ccircle%20cx%3D%22135.2%22%20cy%3D%22235.3%22%20r%3D%220.78%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.48%22/%3E%3Ccircle%20cx%3D%2228.4%22%20cy%3D%22252.4%22%20r%3D%220.77%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.89%22/%3E%3Ccircle%20cx%3D%22343.9%22%20cy%3D%2228.3%22%20r%3D%220.79%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.75%22/%3E%3Ccircle%20cx%3D%2285.7%22%20cy%3D%2252.9%22%20r%3D%221.62%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.69%22/%3E%3Ccircle%20cx%3D%22189.1%22%20cy%3D%22313.8%22%20r%3D%221.47%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.46%22/%3E%3Ccircle%20cx%3D%2238.8%22%20cy%3D%22172.4%22%20r%3D%221.01%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.63%22/%3E%3Ccircle%20cx%3D%22291.6%22%20cy%3D%22269.3%22%20r%3D%221.68%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.41%22/%3E%3Ccircle%20cx%3D%22161.0%22%20cy%3D%22135.7%22%20r%3D%221.53%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.5%22/%3E%3Ccircle%20cx%3D%2276.1%22%20cy%3D%22179.4%22%20r%3D%221.01%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.52%22/%3E%3Ccircle%20cx%3D%2299.9%22%20cy%3D%22369.3%22%20r%3D%221.03%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.87%22/%3E%3Ccircle%20cx%3D%22220.1%22%20cy%3D%2220.2%22%20r%3D%221.7%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.85%22/%3E%3Ccircle%20cx%3D%22387.6%22%20cy%3D%22370.5%22%20r%3D%221.52%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.45%22/%3E%3Ccircle%20cx%3D%22194.3%22%20cy%3D%2285.5%22%20r%3D%220.98%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.39%22/%3E%3Ccircle%20cx%3D%22151.6%22%20cy%3D%22394.1%22%20r%3D%220.82%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.82%22/%3E%3Ccircle%20cx%3D%22182.0%22%20cy%3D%22169.2%22%20r%3D%221.65%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.95%22/%3E%3Ccircle%20cx%3D%22222.3%22%20cy%3D%22287.4%22%20r%3D%220.69%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.53%22/%3E%3Ccircle%20cx%3D%22387.5%22%20cy%3D%22231.7%22%20r%3D%221.15%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.8%22/%3E%3Ccircle%20cx%3D%2222.9%22%20cy%3D%22233.7%22%20r%3D%221.1%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.86%22/%3E%3Ccircle%20cx%3D%2263.0%22%20cy%3D%22384.3%22%20r%3D%220.6%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.46%22/%3E%3Ccircle%20cx%3D%22238.0%22%20cy%3D%22270.1%22%20r%3D%220.78%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.42%22/%3E%3Ccircle%20cx%3D%22356.1%22%20cy%3D%2298.5%22%20r%3D%221.21%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.72%22/%3E%3Ccircle%20cx%3D%22167.7%22%20cy%3D%22233.5%22%20r%3D%221.13%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.91%22/%3E%3Ccircle%20cx%3D%2281.7%22%20cy%3D%22286.5%22%20r%3D%220.79%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.59%22/%3E%3Ccircle%20cx%3D%22268.7%22%20cy%3D%22120.0%22%20r%3D%220.88%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.8%22/%3E%3Ccircle%20cx%3D%2229.0%22%20cy%3D%22183.3%22%20r%3D%221.7%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.95%22/%3E%3Ccircle%20cx%3D%2229.3%22%20cy%3D%2285.3%22%20r%3D%220.82%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.91%22/%3E%3Ccircle%20cx%3D%22352.3%22%20cy%3D%22351.7%22%20r%3D%220.94%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.44%22/%3E%3Ccircle%20cx%3D%22333.5%22%20cy%3D%22281.4%22%20r%3D%221.23%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.94%22/%3E%3Ccircle%20cx%3D%22261.6%22%20cy%3D%223.1%22%20r%3D%221.48%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.53%22/%3E%3Ccircle%20cx%3D%22265.4%22%20cy%3D%22375.6%22%20r%3D%220.66%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.42%22/%3E%3Ccircle%20cx%3D%2242.8%22%20cy%3D%22221.3%22%20r%3D%220.83%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.71%22/%3E%3Ccircle%20cx%3D%22287.0%22%20cy%3D%2281.4%22%20r%3D%221.26%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.51%22/%3E%3Ccircle%20cx%3D%22195.4%22%20cy%3D%22362.1%22%20r%3D%221.52%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.41%22/%3E%3Ccircle%20cx%3D%22169.4%22%20cy%3D%22110.7%22%20r%3D%220.5%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.81%22/%3E%3Ccircle%20cx%3D%22254.8%22%20cy%3D%22104.8%22%20r%3D%221.39%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.68%22/%3E%3Ccircle%20cx%3D%22171.1%22%20cy%3D%223.9%22%20r%3D%220.59%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.88%22/%3E%3Ccircle%20cx%3D%22361.6%22%20cy%3D%22218.2%22%20r%3D%221.5%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.7%22/%3E%3Ccircle%20cx%3D%2259.2%22%20cy%3D%2251.0%22%20r%3D%220.87%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.89%22/%3E%3Ccircle%20cx%3D%22318.4%22%20cy%3D%22344.3%22%20r%3D%221.58%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.48%22/%3E%3Ccircle%20cx%3D%2299.8%22%20cy%3D%2241.1%22%20r%3D%221.44%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.88%22/%3E%3Ccircle%20cx%3D%22162.6%22%20cy%3D%22248.3%22%20r%3D%220.69%22%20fill%3D%22%23fff%22%20fill-opacity%3D%220.91%22/%3E%3C/svg%3E") repeat,
+    linear-gradient(180deg, #0a1120 0%, #101a30 55%, #0d1526 100%);
+  background-size: auto, 400px 400px, auto;
+}
+
+:root[data-tema="escuro"] .camada-floresta { display: none; }
+:root[data-tema="escuro"] .camada-estrelas { display: block; }
+
+.topbar {
+  padding: 24px 16px 8px;
+  text-align: center;
+}
+
+.topbar h1 {
+  margin: 0;
+  font-family: var(--fonte-destaque);
+  font-weight: 700;
+  font-size: 2rem;
+  letter-spacing: 0.01em;
+}
+
+.subtitle {
+  margin: 4px 0 0;
+  color: var(--cor-destaque);
+  font-size: 0.95rem;
+}
+
+main {
+  flex: 1;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+.tela.escondida { display: none; }
+
+h2 { font-family: var(--fonte-destaque); font-weight: 600; font-size: 1.3rem; margin-bottom: 4px; }
+
+.aviso {
+  font-size: 0.85rem;
+  color: var(--cor-pendente);
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--cor-borda);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 12px 0 20px;
+}
+
+.subtitulo-secao {
+  font-family: var(--fonte-destaque);
+  font-weight: 700;
+  font-size: 1rem;
+  margin: 22px 0 2px;
+}
+
+.subtitulo-secao:first-of-type { margin-top: 10px; }
+
+.lista-textos,
+.lista-livros {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* --- cartão de livro: como o cartão de texto, mas com barra de progresso
+   e um botão de ação próprio (Começar / Continuar), em vez do cartão
+   inteiro ser clicável — assim dá pra ver o progresso sem precisar entrar --- */
+.cartao-livro {
+  background: var(--cor-cartao);
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.cartao-livro .titulo {
+  font-family: var(--fonte-destaque);
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+.cartao-livro .meta {
+  color: var(--cor-pendente);
+  font-size: 0.85rem;
+  margin-top: 2px;
+}
+
+.cartao-livro .linha-acao {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.barra-progresso-livro {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--cor-fundo);
+  border: 1px solid var(--cor-borda);
+  overflow: hidden;
+}
+
+.barra-progresso-livro-preenchida {
+  height: 100%;
+  background: var(--cor-destaque);
+  border-radius: 999px 0 0 999px;
+  transition: width 0.3s ease;
+}
+
+.cartao-livro .texto-progresso {
+  font-size: 0.78rem;
+  color: var(--cor-pendente);
+  white-space: nowrap;
+}
+
+.cartao-livro .btn-continuar {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+}
+
+.cartao-texto {
+  background: var(--cor-cartao);
+  color: var(--cor-texto);
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  font-family: inherit;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.cartao-texto:hover {
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  transform: translateY(-1px);
+}
+
+.cartao-texto .titulo {
+  font-family: var(--fonte-destaque);
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+.cartao-texto .meta {
+  color: var(--cor-pendente);
+  font-size: 0.85rem;
+  margin-top: 2px;
+}
+
+.info-texto {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 0.95rem;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--cor-destaque);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-family: inherit;
+  padding: 0;
+}
+
+.stats-bar {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.stat { display: flex; flex-direction: column; align-items: center; }
+.stat-valor { font-family: var(--fonte-destaque); font-size: 1.4rem; font-weight: 700; }
+.stat-label { font-size: 0.75rem; color: var(--cor-pendente); text-transform: uppercase; letter-spacing: 0.04em; }
+
+.texto-alvo {
+  font-family: var(--fonte-leitura);
+  font-size: 1.3rem;
+  line-height: 1.9;
+  background: var(--cor-cartao);
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+  padding: 24px;
+  cursor: text;
+  user-select: none;
+  white-space: pre-wrap;
+}
+
+.char-correto { color: var(--cor-correto); background: var(--cor-correto-fundo); border-radius: 2px; }
+.char-errado { color: var(--cor-errado); background: var(--cor-errado-fundo); border-radius: 2px; }
+.char-pendente { color: var(--cor-pendente); }
+.char-atual { border-bottom: 2px solid var(--cor-destaque); }
+
+.input-oculto {
+  position: absolute;
+  opacity: 0;
+  height: 1px;
+  width: 1px;
+  pointer-events: none;
+}
+
+.dica {
+  font-size: 0.85rem;
+  color: var(--cor-pendente);
+  margin-top: 12px;
+}
+
+.resultado-stats {
+  display: flex;
+  gap: 32px;
+  margin: 20px 0 28px;
+}
+
+.resultado-item { display: flex; flex-direction: column; }
+.resultado-item span { font-family: var(--fonte-destaque); font-size: 2rem; font-weight: 700; color: var(--cor-destaque); }
+.resultado-item label { font-size: 0.8rem; color: var(--cor-pendente); }
+
+.botoes-resultado { display: flex; gap: 12px; }
+
+/* --- botões flutuantes (tema, som ambiente e som do teclado), agrupados no canto superior direito --- */
+.controles-flutuantes {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 100;
+  display: flex;
+  gap: 10px;
+}
+
+.btn-flutuante {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 0;
+  background: var(--cor-cartao);
+  color: var(--cor-texto);
+  border: 1px solid var(--cor-borda);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  transition: box-shadow 0.15s ease, transform 0.15s ease, opacity 0.15s ease;
+}
+
+.btn-flutuante:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(0,0,0,0.12); }
+
+/* o ícone em si é um teclado (deixa claro que é o som das teclas, não um
+   "mudo" geral do site): mostra ondinhas de som saindo dele quando ligado,
+   e um traço diagonal (igual ícone de "desligado") quando desligado */
+.icone-som .traco-mudo { display: none; }
+.btn-som[aria-pressed="false"] .onda-som { display: none; }
+.btn-som[aria-pressed="false"] .traco-mudo { display: block; }
+.btn-som[aria-pressed="false"] { opacity: 0.6; }
+
+/* o ícone do som ambiente é uma nuvenzinha com linhas de vento saindo dela
+   quando ligado, e o mesmo traço diagonal de "desligado" quando desligado —
+   deixa claro que esse botão é sobre o som de fundo, separado do som do teclado */
+.icone-ambiente .traco-mudo-ambiente { display: none; }
+.btn-ambiente[aria-pressed="false"] .ondas-vento { display: none; }
+.btn-ambiente[aria-pressed="false"] .traco-mudo-ambiente { display: block; }
+.btn-ambiente[aria-pressed="false"] { opacity: 0.6; }
+
+/* --- painel do som ambiente: aparece ao passar o mouse (ou focar via teclado)
+   sobre o botão, com a escolha do tipo de som e o controle de volume --- */
+.controle-ambiente { position: relative; }
+
+.painel-ambiente {
+  position: absolute;
+  top: 52px;
+  right: 0;
+  width: 190px;
+  background: var(--cor-cartao);
+  border: 1px solid var(--cor-borda);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.14);
+  padding: 12px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px);
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+  z-index: 101;
+}
+
+/* ponte invisível entre o botão e o painel, pra não perder o hover ao
+   mover o mouse de um pro outro */
+.painel-ambiente::before {
+  content: "";
+  position: absolute;
+  top: -16px;
+  left: 0;
+  right: 0;
+  height: 16px;
+}
+
+.controle-ambiente:hover .painel-ambiente,
+.controle-ambiente:focus-within .painel-ambiente {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.painel-ambiente-titulo {
+  font-family: var(--fonte-destaque);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--cor-pendente);
+  margin: 0 0 8px;
+}
+
+.lista-sons {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.opcao-som {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-family: var(--fonte-leitura);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--cor-texto);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+
+.opcao-som:hover { background: var(--cor-fundo); }
+
+.opcao-som[aria-pressed="true"] {
+  background: var(--cor-destaque);
+  color: #fff;
+  border-color: var(--cor-destaque);
+}
+
+.opcao-som .emoji-som { font-size: 1rem; line-height: 1; }
+
+.controle-volume {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid var(--cor-borda);
+  padding-top: 10px;
+}
+
+.controle-volume label {
+  font-size: 0.75rem;
+  color: var(--cor-pendente);
+  white-space: nowrap;
+}
+
+.slider-volume {
+  flex: 1;
+  accent-color: var(--cor-destaque);
+}
+
+/* --- tela de resultado: entrada suave toda vez que ela aparece --- */
+#tela-resultado {
+  animation: entrada-resultado 0.4s ease;
+}
+
+@keyframes entrada-resultado {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.resultado-check { display: flex; justify-content: center; margin-bottom: 4px; }
+.check-svg { width: 64px; height: 64px; }
+
+.check-circulo {
+  stroke: var(--cor-correto);
+  stroke-width: 3;
+  stroke-dasharray: 151;
+  stroke-dashoffset: 151;
+  animation: desenhar-circulo 0.5s ease forwards;
+}
+
+.check-marca {
+  stroke: var(--cor-correto);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 36;
+  stroke-dashoffset: 36;
+  animation: desenhar-marca 0.3s ease forwards 0.45s;
+}
+
+@keyframes desenhar-circulo { to { stroke-dashoffset: 0; } }
+@keyframes desenhar-marca { to { stroke-dashoffset: 0; } }
+
+.resultado-titulo {
+  color: var(--cor-pendente);
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+}
+
+.resultado-recorde {
+  display: inline-block;
+  font-family: var(--fonte-destaque);
+  background: var(--cor-destaque);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 999px;
+  margin: 0 0 12px;
+}
+
+.resultado-recorde:empty { display: none; }
+
+.resultado-capitulo {
+  display: inline-block;
+  font-family: var(--fonte-destaque);
+  background: var(--cor-correto-fundo);
+  color: var(--cor-correto);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 999px;
+  margin: 0 0 12px;
+}
+
+.resultado-capitulo:empty { display: none; }
+
+button {
+  font-family: var(--fonte-destaque);
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--cor-destaque);
+  background: var(--cor-destaque);
+  color: white;
+  cursor: pointer;
+}
+
+#btn-repetir, #btn-proximo {
+  background: var(--cor-cartao);
+  color: var(--cor-destaque);
+}
+
+footer {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--cor-pendente);
+  padding: 16px;
+}
+
+/* chip de fundo no texto do rodapé — sem ele, o texto ficava difícil de ler
+   em cima das árvores (tema claro) ou das estrelas mais claras (tema escuro) */
+footer p {
+  display: inline-block;
+  margin: 0;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+:root[data-tema="escuro"] footer p {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* modo escuro: agora é escolha manual da pessoa (botão 🌙/☀️), não mais
+   decidido sozinho pelo sistema operacional — assim o site não aparece
+   escuro sem querer para quem usa modo escuro no celular/computador */
+:root[data-tema="escuro"] {
+  --cor-fundo: #0a0f1c;
+  --cor-texto: #dce6f5;
+  --cor-destaque: #6fa3e0;
+  --cor-destaque-forte: #8fb8e8;
+  --cor-cartao: #1f2f52;
+  --cor-borda: #3a4e78;
+  --cor-correto: #4ade80;
+  --cor-correto-fundo: #1f3b2a;
+  --cor-errado-fundo: #3a2430;
+  --cor-pendente: #8b9bc0;
+}
+
+:root[data-tema="escuro"] .aviso {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+body { transition: background-color 0.2s ease, color 0.2s ease; }
