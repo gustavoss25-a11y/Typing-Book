@@ -247,6 +247,7 @@ h2 { font-family: var(--fonte-destaque); font-weight: 600; font-size: 1.3rem; ma
   cursor: text;
   user-select: none;
   white-space: pre-wrap;
+  overflow-wrap: break-word;
 }
 
 .char-correto { color: var(--cor-correto); background: var(--cor-correto-fundo); border-radius: 2px; }
@@ -255,7 +256,9 @@ h2 { font-family: var(--fonte-destaque); font-weight: 600; font-size: 1.3rem; ma
 .char-atual { border-bottom: 2px solid var(--cor-destaque); }
 
 .input-oculto {
-  position: absolute;
+  position: fixed;
+  top: 0;
+  left: 0;
   opacity: 0;
   height: 1px;
   width: 1px;
