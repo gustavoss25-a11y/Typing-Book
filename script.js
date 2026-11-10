@@ -127,6 +127,58 @@ function salvarProgressoLivro(id, indiceGlobalConcluido) {
   }
 }
 
+// --- localStorage: rascunho (o que já foi digitado) de uma página/texto em
+// andamento, ainda não concluído --------------------------------------------
+// Diferente do "progresso do livro" acima (que só avança quando uma página é
+// CONCLUÍDA), este rascunho guarda o texto digitado até agora numa página
+// ainda em andamento, pra retomar exatamente do ponto onde a pessoa parou,
+// mesmo saindo no meio sem terminar. É apagado assim que a página é
+// concluída (não faz sentido guardar rascunho de algo já terminado).
+function chaveRascunhoLivro(livroId, indiceGlobal) {
+  return `typingbook_rascunho_livro_${livroId}_pagina_${indiceGlobal}`;
+}
+
+function chaveRascunhoTexto(id) {
+  return `typingbook_rascunho_texto_${id}`;
+}
+
+function chaveRascunhoAtual() {
+  if (contextoLivro) {
+    return chaveRascunhoLivro(contextoLivro.livro.id, contextoLivro.indiceGlobal);
+  }
+  if (textoAtual) {
+    return chaveRascunhoTexto(textoAtual.id);
+  }
+  return null;
+}
+
+function lerRascunho(chave) {
+  if (!chave) return null;
+  try {
+    return localStorage.getItem(chave);
+  } catch (e) {
+    return null; // localStorage pode falhar (modo privado, etc.) — segue sem rascunho
+  }
+}
+
+function salvarRascunho(chave, valor) {
+  if (!chave) return;
+  try {
+    localStorage.setItem(chave, valor);
+  } catch (e) {
+    // ignora — rascunho é um extra, não essencial
+  }
+}
+
+function apagarRascunho(chave) {
+  if (!chave) return;
+  try {
+    localStorage.removeItem(chave);
+  } catch (e) {
+    // ignora
+  }
+}
+
 // --- tela 1: lista de livros ----------------------------------------------
 function montarListaLivros() {
   if (!listaLivros || typeof LIVROS === "undefined") return;
@@ -137,8 +189,15 @@ function montarListaLivros() {
     const total = flat.length;
     const concluidas = Math.min(lerProgressoLivro(livro.id) + 1, total);
     const pct = total > 0 ? Math.round((concluidas / total) * 100) : 0;
-    const comecou = concluidas > 0;
     const terminou = concluidas >= total;
+    // a próxima página a abrir é sempre "última concluída + 1" — mesmo que
+    // nenhuma página tenha sido CONCLUÍDA ainda, pode haver um rascunho em
+    // andamento nela (a pessoa começou a digitar e saiu no meio); nesse caso
+    // o botão já mostra "Continuar" em vez de "Começar a ler", porque é
+    // exatamente isso que ele vai fazer
+    const proximaPagina = Math.max(0, lerProgressoLivro(livro.id) + 1);
+    const temRascunhoPendente = !terminou && !!lerRascunho(chaveRascunhoLivro(livro.id, proximaPagina));
+    const comecou = concluidas > 0 || temRascunhoPendente;
 
     const rotuloBotao = terminou ? "Reler do início" : (comecou ? "Continuar" : "Começar a ler");
 
@@ -178,10 +237,7 @@ function iniciarPaginaLivro(livro, indiceGlobal) {
     titulo: `${livro.titulo} — Cap. ${pagina.capitulo.numero}: ${pagina.capitulo.titulo}`,
     autor: `${livro.autor} · pág. ${numeroNoCapitulo}/${totalNoCapitulo} do capítulo · ${indiceGlobal + 1}/${flat.length} do livro`,
     texto: pagina.texto,
-  });
-
-  // iniciarTexto() zera contextoLivro (ver abaixo) — define-se depois dele
-  contextoLivro = { livro, indiceGlobal, totalPaginas: flat.length };
+  }, { livro, indiceGlobal, totalPaginas: flat.length });
 }
 
 function irParaSelecao() {
@@ -191,22 +247,39 @@ function irParaSelecao() {
 }
 
 // --- tela 2: digitação -----------------------------------------------------
-function iniciarTexto(texto) {
+// "novoContextoLivro" vem preenchido quando quem chama é iniciarPaginaLivro()
+// (uma página de livro) e fica null para um texto avulso de textos.js.
+function iniciarTexto(texto, novoContextoLivro = null) {
   textoAtual = texto;
-  contextoLivro = null; // texto avulso por padrão; iniciarPaginaLivro() redefine isso logo em seguida
+  contextoLivro = novoContextoLivro;
   inicioEm = null;
   concluido = false;
 
   tituloAtual.textContent = `${texto.titulo} — ${texto.autor}`;
-  renderizarTextoAlvo("");
-  inputDigitacao.value = "";
+
+  // se a pessoa já tinha começado a digitar essa mesma página/texto antes e
+  // saiu sem concluir, retoma exatamente de onde parou (ver seção do rascunho
+  // mais abaixo) — só usa o rascunho se ele for mais curto que o texto todo
+  // (um rascunho do tamanho do texto completo significaria página já
+  // concluída, o que não devia acontecer, mas por segurança ignoramos)
+  const rascunho = lerRascunho(chaveRascunhoAtual());
+  const digitadoInicial = (rascunho && rascunho.length > 0 && rascunho.length < texto.texto.length)
+    ? rascunho
+    : "";
+
+  renderizarTextoAlvo(digitadoInicial);
+  inputDigitacao.value = digitadoInicial;
   inputDigitacao.maxLength = texto.texto.length;
 
-  atualizarStats("", 0);
+  atualizarStats(digitadoInicial, 0);
 
   mostrarTela(telaDigitacao);
   // pequeno delay para garantir que o foco funcione após a troca de tela
-  setTimeout(() => inputDigitacao.focus(), 50);
+  setTimeout(() => {
+    inputDigitacao.focus();
+    // cursor no fim do que já foi retomado, pra continuar digitando dali
+    inputDigitacao.setSelectionRange(digitadoInicial.length, digitadoInicial.length);
+  }, 50);
 }
 
 function renderizarTextoAlvo(digitado) {
@@ -279,9 +352,16 @@ inputDigitacao.addEventListener("input", () => {
   // independente de ter erros não corrigidos pelo caminho — a precisão%
   // continua sendo calculada e mostrada normalmente no resultado.
   if (digitado.length === textoAtual.texto.length) {
+    apagarRascunho(chaveRascunhoAtual()); // página concluída: não precisa mais do rascunho
     concluido = true;
     const tempoTotalMs = Date.now() - inicioEm;
     finalizarTexto(wpm, precisao, tempoTotalMs);
+  } else if (digitado.length > 0) {
+    // ainda não terminou: guarda o que já foi digitado, pra retomar daqui se
+    // a pessoa sair da página antes de concluir
+    salvarRascunho(chaveRascunhoAtual(), digitado);
+  } else {
+    apagarRascunho(chaveRascunhoAtual());
   }
 });
 
@@ -999,12 +1079,9 @@ document.addEventListener("keydown", tentarIniciarAmbienteNaPrimeiraInteracao);
 btnVoltar.addEventListener("click", irParaSelecao);
 
 btnRepetir.addEventListener("click", () => {
-  // repetir uma página de livro precisa preservar o contexto do livro
-  // (iniciarTexto() reseta contextoLivro a cada chamada), senão ao concluir
-  // de novo o app trataria a página como um texto avulso comum
-  const contextoAnterior = contextoLivro;
-  iniciarTexto(textoAtual);
-  if (contextoAnterior) contextoLivro = contextoAnterior;
+  // repetir uma página de livro precisa preservar o contexto do livro,
+  // senão ao concluir de novo o app trataria a página como um texto avulso
+  iniciarTexto(textoAtual, contextoLivro);
 });
 
 // btnProximo.onclick é definido dinamicamente em finalizarTexto() (pode virar
