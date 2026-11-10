@@ -11,6 +11,7 @@ const telaDigitacao = document.getElementById("tela-digitacao");
 const telaResultado = document.getElementById("tela-resultado");
 
 const listaTextos = document.getElementById("lista-textos");
+const listaLivros = document.getElementById("lista-livros");
 const tituloAtual = document.getElementById("titulo-atual");
 const textoAlvoEl = document.getElementById("texto-alvo");
 const inputDigitacao = document.getElementById("input-digitacao");
@@ -31,12 +32,19 @@ const btnSom = document.getElementById("btn-som");
 const btnAmbiente = document.getElementById("btn-ambiente");
 const btnTema = document.getElementById("btn-tema");
 const resultadoTitulo = document.getElementById("resultado-titulo");
+const resultadoCapitulo = document.getElementById("resultado-capitulo");
 const resultadoRecorde = document.getElementById("resultado-recorde");
 
 // --- estado da sessão de digitação atual --------------------------------
 let textoAtual = null;   // objeto { id, titulo, autor, texto }
 let inicioEm = null;      // timestamp do primeiro caractere digitado
 let concluido = false;
+
+// quando a pessoa está lendo uma PÁGINA DE LIVRO (em vez de um texto avulso
+// de textos.js), este objeto guarda o contexto: qual livro, e o índice
+// global dessa página dentro da lista de todas as páginas do livro.
+// Fica null quando o texto atual é um texto avulso.
+let contextoLivro = null; // { livro, indiceGlobal, totalPaginas }
 
 // --- navegação entre telas ----------------------------------------------
 function mostrarTela(tela) {
@@ -60,9 +68,132 @@ function montarListaTextos() {
   });
 }
 
+// ============================================================================
+// LIVROS: achatar capítulos/páginas numa lista só, progresso e tela de seleção
+// ============================================================================
+// Cada livro (ver livros.js) é dividido em capítulos, e cada capítulo em
+// páginas (um ou mais parágrafos). Para o "Continuar" funcionar de forma
+// simples, tratamos o livro inteiro como UMA sequência linear de páginas —
+// o progresso salvo é só um número: o índice global da última página
+// concluída. Um capítulo aparece como "concluído" automaticamente quando
+// esse índice passa da última página dele, sem precisar guardar nada extra.
+
+const CACHE_PAGINAS_FLAT = {};
+
+function paginasFlat(livro) {
+  if (CACHE_PAGINAS_FLAT[livro.id]) return CACHE_PAGINAS_FLAT[livro.id];
+  const flat = [];
+  livro.capitulos.forEach((capitulo, capIndex) => {
+    capitulo.paginas.forEach((texto, paginaIndex) => {
+      flat.push({
+        capIndex,
+        paginaIndex,
+        capitulo,
+        texto,
+        ultimaDoCapitulo: paginaIndex === capitulo.paginas.length - 1,
+      });
+    });
+  });
+  CACHE_PAGINAS_FLAT[livro.id] = flat;
+  return flat;
+}
+
+function chaveProgressoLivro(id) {
+  return `typingbook_progresso_livro_${id}`;
+}
+
+// retorna o índice global da última página concluída, ou -1 se ainda não
+// começou (índice -1 facilita a conta "quantas páginas concluídas" = idx+1)
+function lerProgressoLivro(id) {
+  try {
+    const bruto = localStorage.getItem(chaveProgressoLivro(id));
+    if (bruto === null) return -1;
+    const n = parseInt(bruto, 10);
+    return isNaN(n) ? -1 : n;
+  } catch (e) {
+    return -1; // localStorage pode falhar (modo privado, etc.) — segue sem progresso
+  }
+}
+
+function salvarProgressoLivro(id, indiceGlobalConcluido) {
+  try {
+    const atual = lerProgressoLivro(id);
+    // só avança, nunca retrocede (reler uma página antiga não "perde o lugar")
+    if (indiceGlobalConcluido > atual) {
+      localStorage.setItem(chaveProgressoLivro(id), String(indiceGlobalConcluido));
+    }
+  } catch (e) {
+    // ignora — progresso é um extra, não essencial
+  }
+}
+
+// --- tela 1: lista de livros ----------------------------------------------
+function montarListaLivros() {
+  if (!listaLivros || typeof LIVROS === "undefined") return;
+  listaLivros.innerHTML = "";
+
+  LIVROS.forEach(livro => {
+    const flat = paginasFlat(livro);
+    const total = flat.length;
+    const concluidas = Math.min(lerProgressoLivro(livro.id) + 1, total);
+    const pct = total > 0 ? Math.round((concluidas / total) * 100) : 0;
+    const comecou = concluidas > 0;
+    const terminou = concluidas >= total;
+
+    const rotuloBotao = terminou ? "Reler do início" : (comecou ? "Continuar" : "Começar a ler");
+
+    const card = document.createElement("div");
+    card.className = "cartao-livro";
+    card.innerHTML = `
+      <div class="titulo">${livro.titulo}</div>
+      <div class="meta">${livro.autor} · ${livro.ano} · ${livro.capitulos.length} capítulos</div>
+      <div class="linha-acao">
+        <div class="barra-progresso-livro">
+          <div class="barra-progresso-livro-preenchida" style="width: ${pct}%"></div>
+        </div>
+        <span class="texto-progresso">${concluidas} de ${total} páginas concluídas</span>
+        <button type="button" class="btn-continuar">${rotuloBotao}</button>
+      </div>
+    `;
+    card.querySelector(".btn-continuar").addEventListener("click", () => {
+      const proximoIndice = terminou ? 0 : Math.max(0, lerProgressoLivro(livro.id) + 1);
+      iniciarPaginaLivro(livro, proximoIndice);
+    });
+    listaLivros.appendChild(card);
+  });
+}
+
+// inicia (ou retoma) a leitura de um livro numa página específica, pelo
+// índice global dela na lista achatada de páginas
+function iniciarPaginaLivro(livro, indiceGlobal) {
+  const flat = paginasFlat(livro);
+  const pagina = flat[indiceGlobal];
+  if (!pagina) return;
+
+  const numeroNoCapitulo = pagina.paginaIndex + 1;
+  const totalNoCapitulo = pagina.capitulo.paginas.length;
+
+  iniciarTexto({
+    id: `${livro.id}__pagina-${indiceGlobal}`,
+    titulo: `${livro.titulo} — Cap. ${pagina.capitulo.numero}: ${pagina.capitulo.titulo}`,
+    autor: `${livro.autor} · pág. ${numeroNoCapitulo}/${totalNoCapitulo} do capítulo · ${indiceGlobal + 1}/${flat.length} do livro`,
+    texto: pagina.texto,
+  });
+
+  // iniciarTexto() zera contextoLivro (ver abaixo) — define-se depois dele
+  contextoLivro = { livro, indiceGlobal, totalPaginas: flat.length };
+}
+
+function irParaSelecao() {
+  mostrarTela(telaSelecao);
+  montarListaLivros();
+  montarListaTextos();
+}
+
 // --- tela 2: digitação -----------------------------------------------------
 function iniciarTexto(texto) {
   textoAtual = texto;
+  contextoLivro = null; // texto avulso por padrão; iniciarPaginaLivro() redefine isso logo em seguida
   inicioEm = null;
   concluido = false;
 
@@ -169,8 +300,37 @@ function finalizarTexto(wpm, precisao, tempoTotalMs) {
   resultadoTempo.textContent = `${Math.round(tempoTotalMs / 1000)}s`;
   resultadoTitulo.textContent = `Você concluiu: ${textoAtual.titulo}`;
   resultadoRecorde.textContent = bateuRecorde ? "🏆 Novo recorde pessoal!" : "";
+  resultadoCapitulo.textContent = "";
 
   salvarRecordeSeMelhor(textoAtual.id, wpm, precisao);
+
+  // se esta página pertence a um livro: salva o progresso, avisa quando um
+  // capítulo inteiro foi concluído, e prepara o botão "Continuar lendo" para
+  // já pular direto pra próxima página (sem passar pela tela de seleção)
+  if (contextoLivro) {
+    const { livro, indiceGlobal, totalPaginas } = contextoLivro;
+    salvarProgressoLivro(livro.id, indiceGlobal);
+
+    const flat = paginasFlat(livro);
+    const paginaConcluida = flat[indiceGlobal];
+    if (paginaConcluida && paginaConcluida.ultimaDoCapitulo) {
+      resultadoCapitulo.textContent = `📖 Capítulo concluído: ${paginaConcluida.capitulo.titulo}`;
+    }
+
+    const haProximaPagina = indiceGlobal + 1 < totalPaginas;
+    if (haProximaPagina) {
+      btnProximo.textContent = "Continuar lendo →";
+      const proximoIndice = indiceGlobal + 1;
+      btnProximo.onclick = () => iniciarPaginaLivro(livro, proximoIndice);
+    } else {
+      btnProximo.textContent = "Livro concluído — ver outros textos";
+      btnProximo.onclick = irParaSelecao;
+    }
+  } else {
+    btnProximo.textContent = "Escolher outro texto";
+    btnProximo.onclick = irParaSelecao;
+  }
+
   mostrarTela(telaResultado);
   tocarSomConclusao();
 }
@@ -317,7 +477,7 @@ function obterBufferRuido(ctx) {
 //      bem curto e levemente metálico (ruído passado por um filtro passa-faixa
 //      numa frequência média-alta);
 //   2) "baque" — a barra do tipo batendo no rolo/papel, um instante depois,
-//      com corpo mais grave e um pouco mais longo (ruído passa-baixo + um
+//      com corpo mais grave e um pouco mais longo (ruído passa-baixa + um
 //      tom grave curto).
 // As duas partes juntas dão a sensação de "tec-TUM" de uma tecla mecânica,
 // em vez de um único som genérico. Continua tudo suave (sem agudos ásperos,
@@ -836,18 +996,22 @@ document.addEventListener("click", tentarIniciarAmbienteNaPrimeiraInteracao);
 document.addEventListener("keydown", tentarIniciarAmbienteNaPrimeiraInteracao);
 
 // --- botões de navegação -------------------------------------------------
-btnVoltar.addEventListener("click", () => {
-  mostrarTela(telaSelecao);
-  montarListaTextos();
+btnVoltar.addEventListener("click", irParaSelecao);
+
+btnRepetir.addEventListener("click", () => {
+  // repetir uma página de livro precisa preservar o contexto do livro
+  // (iniciarTexto() reseta contextoLivro a cada chamada), senão ao concluir
+  // de novo o app trataria a página como um texto avulso comum
+  const contextoAnterior = contextoLivro;
+  iniciarTexto(textoAtual);
+  if (contextoAnterior) contextoLivro = contextoAnterior;
 });
 
-btnRepetir.addEventListener("click", () => iniciarTexto(textoAtual));
-
-btnProximo.addEventListener("click", () => {
-  mostrarTela(telaSelecao);
-  montarListaTextos();
-});
+// btnProximo.onclick é definido dinamicamente em finalizarTexto() (pode virar
+// "Continuar lendo" dentro de um livro) — aqui só garantimos um padrão inicial
+btnProximo.onclick = irParaSelecao;
 
 // --- início ---------------------------------------------------------------
+montarListaLivros();
 montarListaTextos();
 mostrarTela(telaSelecao);

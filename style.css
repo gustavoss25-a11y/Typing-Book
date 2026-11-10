@@ -105,10 +105,77 @@ h2 { font-family: var(--fonte-destaque); font-weight: 600; font-size: 1.3rem; ma
   margin: 12px 0 20px;
 }
 
-.lista-textos {
+.subtitulo-secao {
+  font-family: var(--fonte-destaque);
+  font-weight: 700;
+  font-size: 1rem;
+  margin: 22px 0 2px;
+}
+
+.subtitulo-secao:first-of-type { margin-top: 10px; }
+
+.lista-textos,
+.lista-livros {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+/* --- cartão de livro: como o cartão de texto, mas com barra de progresso
+   e um botão de ação próprio (Começar / Continuar), em vez do cartão
+   inteiro ser clicável — assim dá pra ver o progresso sem precisar entrar --- */
+.cartao-livro {
+  background: var(--cor-cartao);
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.cartao-livro .titulo {
+  font-family: var(--fonte-destaque);
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+.cartao-livro .meta {
+  color: var(--cor-pendente);
+  font-size: 0.85rem;
+  margin-top: 2px;
+}
+
+.cartao-livro .linha-acao {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.barra-progresso-livro {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--cor-fundo);
+  border: 1px solid var(--cor-borda);
+  overflow: hidden;
+}
+
+.barra-progresso-livro-preenchida {
+  height: 100%;
+  background: var(--cor-destaque);
+  border-radius: 999px 0 0 999px;
+  transition: width 0.3s ease;
+}
+
+.cartao-livro .texto-progresso {
+  font-size: 0.78rem;
+  color: var(--cor-pendente);
+  white-space: nowrap;
+}
+
+.cartao-livro .btn-continuar {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  font-size: 0.85rem;
 }
 
 .cartao-texto {
@@ -413,6 +480,20 @@ h2 { font-family: var(--fonte-destaque); font-weight: 600; font-size: 1.3rem; ma
 }
 
 .resultado-recorde:empty { display: none; }
+
+.resultado-capitulo {
+  display: inline-block;
+  font-family: var(--fonte-destaque);
+  background: var(--cor-correto-fundo);
+  color: var(--cor-correto);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 999px;
+  margin: 0 0 12px;
+}
+
+.resultado-capitulo:empty { display: none; }
 
 button {
   font-family: var(--fonte-destaque);
