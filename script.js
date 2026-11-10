@@ -317,7 +317,7 @@ function obterBufferRuido(ctx) {
 //      bem curto e levemente metálico (ruído passado por um filtro passa-faixa
 //      numa frequência média-alta);
 //   2) "baque" — a barra do tipo batendo no rolo/papel, um instante depois,
-//      com corpo mais grave e um pouco mais longo (ruído passa-baixa + um
+//      com corpo mais grave e um pouco mais longo (ruído passa-baixo + um
 //      tom grave curto).
 // As duas partes juntas dão a sensação de "tec-TUM" de uma tecla mecânica,
 // em vez de um único som genérico. Continua tudo suave (sem agudos ásperos,
@@ -412,13 +412,17 @@ inputDigitacao.addEventListener("keydown", (ev) => {
 });
 
 // ============================================================================
-// Som ambiente (opcional) — chuva/vento suave, para dar sensação de ambiente
+// Som ambiente (opcional) — vários sons soltos à escolha, com volume próprio
 // ============================================================================
-// Também sintetizado na hora com a Web Audio API (ruído filtrado em loop
-// contínuo e bem baixo), sem nenhum arquivo de áudio. Os navegadores só
+// Tudo sintetizado na hora com a Web Audio API (ruído filtrado + alguns
+// osciladores pontuais), sem nenhum arquivo de áudio. Os navegadores só
 // deixam tocar áudio depois de alguma interação da pessoa com a página —
 // então, se estiver ligado, o som começa sozinho assim que ela clica ou
 // digita pela primeira vez em qualquer lugar do site.
+//
+// Passando o mouse (ou focando via teclado) sobre o botão de som ambiente
+// aparece um painel com a lista de sons disponíveis e um controle de volume
+// — trocar de som ou mexer no volume funciona mesmo com o som já tocando.
 
 function lerPreferenciaAmbiente() {
   try {
@@ -437,14 +441,64 @@ function salvarPreferenciaAmbiente(ativado) {
   }
 }
 
+const TIPOS_AMBIENTE_VALIDOS = ["chuva", "floresta", "fogueira", "ondas"];
+
+function lerTipoAmbiente() {
+  try {
+    const salvo = localStorage.getItem("typingbook_ambiente_tipo");
+    return salvo && TIPOS_AMBIENTE_VALIDOS.includes(salvo) ? salvo : "chuva";
+  } catch (e) {
+    return "chuva";
+  }
+}
+
+function salvarTipoAmbiente(tipo) {
+  try {
+    localStorage.setItem("typingbook_ambiente_tipo", tipo);
+  } catch (e) {
+    // ignora
+  }
+}
+
+function lerVolumeAmbiente() {
+  try {
+    const salvo = localStorage.getItem("typingbook_ambiente_volume");
+    const n = salvo === null ? 60 : parseInt(salvo, 10);
+    return (isNaN(n) ? 60 : Math.min(100, Math.max(0, n))) / 100;
+  } catch (e) {
+    return 0.6;
+  }
+}
+
+function salvarVolumeAmbiente(volume01) {
+  try {
+    localStorage.setItem("typingbook_ambiente_volume", String(Math.round(volume01 * 100)));
+  } catch (e) {
+    // ignora
+  }
+}
+
+const listaSons = document.getElementById("lista-sons");
+const botoesSom = listaSons ? Array.from(listaSons.querySelectorAll(".opcao-som")) : [];
+const sliderVolumeAmbiente = document.getElementById("slider-volume-ambiente");
+
 let ambienteAtivado = lerPreferenciaAmbiente();
-let nosAmbiente = null; // nós de áudio do loop de chuva/vento, enquanto está tocando
+let tipoAmbiente = lerTipoAmbiente();
+let volumeAmbiente = lerVolumeAmbiente();
+let nosAmbiente = null; // nós/temporizadores do som ambiente tocando agora, se houver
+let ganhoMestreVolume = null; // nó de volume único, persiste entre trocas de som
 
 function atualizarBotaoAmbiente() {
   // o ícone (nuvem com linhas de vento / nuvem com traço) já troca sozinho
   // via CSS a partir do aria-pressed — aqui só atualizamos o estado e o título
   btnAmbiente.setAttribute("aria-pressed", ambienteAtivado ? "true" : "false");
   btnAmbiente.title = ambienteAtivado ? "Desativar som ambiente" : "Ativar som ambiente";
+}
+
+function atualizarBotoesSom() {
+  botoesSom.forEach(btn => {
+    btn.setAttribute("aria-pressed", btn.dataset.som === tipoAmbiente ? "true" : "false");
+  });
 }
 
 btnAmbiente.addEventListener("click", () => {
@@ -458,13 +512,32 @@ btnAmbiente.addEventListener("click", () => {
   }
 });
 
+botoesSom.forEach(btn => {
+  btn.addEventListener("click", () => {
+    const novoTipo = btn.dataset.som;
+    if (novoTipo === tipoAmbiente) return;
+    trocarPerfilAmbiente(novoTipo);
+  });
+});
+
+if (sliderVolumeAmbiente) {
+  sliderVolumeAmbiente.value = String(Math.round(volumeAmbiente * 100));
+  sliderVolumeAmbiente.addEventListener("input", () => {
+    volumeAmbiente = Number(sliderVolumeAmbiente.value) / 100;
+    salvarVolumeAmbiente(volumeAmbiente);
+    if (ganhoMestreVolume) ganhoMestreVolume.gain.value = volumeAmbiente;
+  });
+}
+
 atualizarBotaoAmbiente(); // estado inicial do botão
+atualizarBotoesSom(); // destaca o som salvo na lista
 
 function criarBufferRuidoMarrom(ctx, duracaoSeg) {
   // "ruído marrom": cada amostra é uma pequena variação sobre a anterior
   // (em vez de totalmente aleatória, como o ruído branco usado no som do
   // teclado) — isso tira os agudos e deixa um chiado grave e constante,
-  // parecido com chuva ou vento distante.
+  // parecido com chuva, vento, fogo ou mar ao longe, dependendo do filtro
+  // aplicado em cima dele em cada perfil de som abaixo.
   const tamanho = Math.floor(ctx.sampleRate * duracaoSeg);
   const buffer = ctx.createBuffer(1, tamanho, ctx.sampleRate);
   const dados = buffer.getChannelData(0);
@@ -477,57 +550,242 @@ function criarBufferRuidoMarrom(ctx, duracaoSeg) {
   return buffer;
 }
 
+function obterGanhoMestreVolume(ctx) {
+  if (!ganhoMestreVolume) {
+    ganhoMestreVolume = ctx.createGain();
+    ganhoMestreVolume.gain.value = volumeAmbiente;
+    ganhoMestreVolume.connect(ctx.destination);
+  }
+  return ganhoMestreVolume;
+}
+
+// --- perfil "chuva e vento" (o som original desta seção) -------------------
+function iniciarPerfilChuva(ctx, destino) {
+  const ganhoPerfil = ctx.createGain();
+  ganhoPerfil.gain.value = 0;
+  ganhoPerfil.connect(destino);
+
+  const fonteChuva = ctx.createBufferSource();
+  fonteChuva.buffer = criarBufferRuidoMarrom(ctx, 4);
+  fonteChuva.loop = true;
+  const filtroChuva = ctx.createBiquadFilter();
+  filtroChuva.type = "lowpass";
+  filtroChuva.frequency.value = 900;
+  const ganhoChuva = ctx.createGain();
+  ganhoChuva.gain.value = 0.05;
+
+  const fonteVento = ctx.createBufferSource();
+  fonteVento.buffer = criarBufferRuidoMarrom(ctx, 6);
+  fonteVento.loop = true;
+  const filtroVento = ctx.createBiquadFilter();
+  filtroVento.type = "bandpass";
+  filtroVento.frequency.value = 400;
+  filtroVento.Q.value = 0.5;
+  const ganhoVento = ctx.createGain();
+  ganhoVento.gain.value = 0.025; // base constante; o LFO soma rajadas por cima
+
+  const lfo = ctx.createOscillator();
+  lfo.type = "sine";
+  lfo.frequency.value = 0.07; // uma "rajada" a cada ~14s, bem devagar
+  const ganhoLfo = ctx.createGain();
+  ganhoLfo.gain.value = 0.018;
+  lfo.connect(ganhoLfo).connect(ganhoVento.gain);
+
+  fonteChuva.connect(filtroChuva).connect(ganhoChuva).connect(ganhoPerfil);
+  fonteVento.connect(filtroVento).connect(ganhoVento).connect(ganhoPerfil);
+
+  const agora = ctx.currentTime;
+  ganhoPerfil.gain.setValueAtTime(0, agora);
+  ganhoPerfil.gain.linearRampToValueAtTime(1, agora + 1.5); // entra bem devagar
+
+  fonteChuva.start(agora);
+  fonteVento.start(agora);
+  lfo.start(agora);
+
+  return { fontes: [fonteChuva, fonteVento, lfo], ganhoPerfil };
+}
+
+// --- perfil "floresta": vento mais arejado entre folhas + passarinhos ao longe, de vez em quando ---
+function tocarPassaro(ctx, destino) {
+  try {
+    const agora = ctx.currentTime;
+    const bips = 2 + Math.floor(Math.random() * 2); // 2 ou 3 bipzinhos por canto
+    for (let i = 0; i < bips; i++) {
+      const inicio = agora + i * (0.12 + Math.random() * 0.07);
+      const freqBase = 2200 + Math.random() * 1400;
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freqBase, inicio);
+      osc.frequency.exponentialRampToValueAtTime(freqBase * 1.3, inicio + 0.05);
+      osc.frequency.exponentialRampToValueAtTime(freqBase * 0.85, inicio + 0.1);
+      const ganho = ctx.createGain();
+      ganho.gain.setValueAtTime(0, inicio);
+      ganho.gain.linearRampToValueAtTime(0.045, inicio + 0.015);
+      ganho.gain.exponentialRampToValueAtTime(0.001, inicio + 0.12);
+      osc.connect(ganho).connect(destino);
+      osc.start(inicio);
+      osc.stop(inicio + 0.13);
+    }
+  } catch (e) {
+    // se falhar, só não canta dessa vez
+  }
+}
+
+function iniciarPerfilFloresta(ctx, destino) {
+  const ganhoPerfil = ctx.createGain();
+  ganhoPerfil.gain.value = 0;
+  ganhoPerfil.connect(destino);
+
+  const fonteFolhas = ctx.createBufferSource();
+  fonteFolhas.buffer = criarBufferRuidoMarrom(ctx, 5);
+  fonteFolhas.loop = true;
+  const filtroFolhas = ctx.createBiquadFilter();
+  filtroFolhas.type = "bandpass";
+  filtroFolhas.frequency.value = 1200; // mais agudo/arejado que a chuva — folhas, não chuvisco
+  filtroFolhas.Q.value = 0.6;
+  const ganhoFolhas = ctx.createGain();
+  ganhoFolhas.gain.value = 0.05;
+
+  const lfo = ctx.createOscillator();
+  lfo.type = "sine";
+  lfo.frequency.value = 0.09;
+  const ganhoLfo = ctx.createGain();
+  ganhoLfo.gain.value = 0.02;
+  lfo.connect(ganhoLfo).connect(ganhoFolhas.gain);
+
+  fonteFolhas.connect(filtroFolhas).connect(ganhoFolhas).connect(ganhoPerfil);
+
+  const agora = ctx.currentTime;
+  ganhoPerfil.gain.setValueAtTime(0, agora);
+  ganhoPerfil.gain.linearRampToValueAtTime(1, agora + 1.5);
+
+  fonteFolhas.start(agora);
+  lfo.start(agora);
+
+  // passarinhos distantes, em intervalos aleatórios — não é um loop, é
+  // reagendado a cada vez, pra nunca soar igual duas vezes seguidas
+  let timeoutPassaro = null;
+  function agendarPassaro() {
+    timeoutPassaro = setTimeout(() => {
+      tocarPassaro(ctx, ganhoPerfil);
+      agendarPassaro();
+    }, 3500 + Math.random() * 6000);
+  }
+  agendarPassaro();
+
+  return {
+    fontes: [fonteFolhas, lfo],
+    ganhoPerfil,
+    aoParar: () => { if (timeoutPassaro) clearTimeout(timeoutPassaro); },
+  };
+}
+
+// --- perfil "fogueira": ronco grave constante + crepitar aleatório -----------
+function tocarCrepitar(ctx, destino) {
+  try {
+    const agora = ctx.currentTime;
+    const fonte = ctx.createBufferSource();
+    fonte.buffer = obterBufferRuido(ctx); // reaproveita o ruído branco curto do som do teclado
+    const filtro = ctx.createBiquadFilter();
+    filtro.type = "bandpass";
+    filtro.frequency.value = 1500 + Math.random() * 2500;
+    filtro.Q.value = 1.5;
+    const ganho = ctx.createGain();
+    const pico = 0.05 + Math.random() * 0.07;
+    ganho.gain.setValueAtTime(pico, agora);
+    ganho.gain.exponentialRampToValueAtTime(0.001, agora + 0.03 + Math.random() * 0.03);
+    fonte.connect(filtro).connect(ganho).connect(destino);
+    fonte.start(agora);
+    fonte.stop(agora + 0.08);
+  } catch (e) {
+    // se falhar, só não crepita dessa vez
+  }
+}
+
+function iniciarPerfilFogueira(ctx, destino) {
+  const ganhoPerfil = ctx.createGain();
+  ganhoPerfil.gain.value = 0;
+  ganhoPerfil.connect(destino);
+
+  const fonteRonco = ctx.createBufferSource();
+  fonteRonco.buffer = criarBufferRuidoMarrom(ctx, 4);
+  fonteRonco.loop = true;
+  const filtroRonco = ctx.createBiquadFilter();
+  filtroRonco.type = "lowpass";
+  filtroRonco.frequency.value = 350; // bem grave — o "corpo" da fogueira
+  const ganhoRonco = ctx.createGain();
+  ganhoRonco.gain.value = 0.06;
+  fonteRonco.connect(filtroRonco).connect(ganhoRonco).connect(ganhoPerfil);
+
+  const agora = ctx.currentTime;
+  ganhoPerfil.gain.setValueAtTime(0, agora);
+  ganhoPerfil.gain.linearRampToValueAtTime(1, agora + 1.2);
+  fonteRonco.start(agora);
+
+  // estalos de lenha em intervalos curtos e aleatórios
+  let timeoutCrepitar = null;
+  function agendarCrepitar() {
+    timeoutCrepitar = setTimeout(() => {
+      tocarCrepitar(ctx, ganhoPerfil);
+      agendarCrepitar();
+    }, 90 + Math.random() * 420);
+  }
+  agendarCrepitar();
+
+  return {
+    fontes: [fonteRonco],
+    ganhoPerfil,
+    aoParar: () => { if (timeoutCrepitar) clearTimeout(timeoutCrepitar); },
+  };
+}
+
+// --- perfil "ondas do mar": ruído grave que incha e recua devagar, tipo maré ---
+function iniciarPerfilOndas(ctx, destino) {
+  const ganhoPerfil = ctx.createGain();
+  ganhoPerfil.gain.value = 0;
+  ganhoPerfil.connect(destino);
+
+  const fonteOnda = ctx.createBufferSource();
+  fonteOnda.buffer = criarBufferRuidoMarrom(ctx, 6);
+  fonteOnda.loop = true;
+  const filtroOnda = ctx.createBiquadFilter();
+  filtroOnda.type = "lowpass";
+  filtroOnda.frequency.value = 650;
+  const ganhoOnda = ctx.createGain();
+  ganhoOnda.gain.value = 0.045;
+
+  const lfo = ctx.createOscillator();
+  lfo.type = "sine";
+  lfo.frequency.value = 0.12; // uma "onda" quebrando a cada ~8s
+  const ganhoLfo = ctx.createGain();
+  ganhoLfo.gain.value = 0.035;
+  lfo.connect(ganhoLfo).connect(ganhoOnda.gain);
+
+  fonteOnda.connect(filtroOnda).connect(ganhoOnda).connect(ganhoPerfil);
+
+  const agora = ctx.currentTime;
+  ganhoPerfil.gain.setValueAtTime(0, agora);
+  ganhoPerfil.gain.linearRampToValueAtTime(1, agora + 1.5);
+  fonteOnda.start(agora);
+  lfo.start(agora);
+
+  return { fontes: [fonteOnda, lfo], ganhoPerfil };
+}
+
+const PERFIS_AMBIENTE = {
+  chuva: iniciarPerfilChuva,
+  floresta: iniciarPerfilFloresta,
+  fogueira: iniciarPerfilFogueira,
+  ondas: iniciarPerfilOndas,
+};
+
 function iniciarAmbiente() {
   if (nosAmbiente || !ambienteAtivado) return;
   try {
     const ctx = obterAudioCtx();
-
-    // "chuva": ruído marrom em loop, suavizado por um filtro passa-baixa —
-    // dá a sensação de um chuvisco constante e distante, sem nenhum agudo
-    const fonteChuva = ctx.createBufferSource();
-    fonteChuva.buffer = criarBufferRuidoMarrom(ctx, 4);
-    fonteChuva.loop = true;
-    const filtroChuva = ctx.createBiquadFilter();
-    filtroChuva.type = "lowpass";
-    filtroChuva.frequency.value = 900;
-    const ganhoChuva = ctx.createGain();
-    ganhoChuva.gain.value = 0;
-
-    // "vento": um segundo ruído, filtro passa-faixa largo e um LFO bem lento
-    // que vai variando o volume aos poucos — simula rajadas suaves de vento
-    const fonteVento = ctx.createBufferSource();
-    fonteVento.buffer = criarBufferRuidoMarrom(ctx, 6);
-    fonteVento.loop = true;
-    const filtroVento = ctx.createBiquadFilter();
-    filtroVento.type = "bandpass";
-    filtroVento.frequency.value = 400;
-    filtroVento.Q.value = 0.5;
-    const ganhoVento = ctx.createGain();
-    ganhoVento.gain.value = 0.025; // base constante; o LFO soma rajadas por cima
-
-    const lfo = ctx.createOscillator();
-    lfo.type = "sine";
-    lfo.frequency.value = 0.07; // uma "rajada" a cada ~14s, bem devagar
-    const ganhoLfo = ctx.createGain();
-    ganhoLfo.gain.value = 0.018;
-    lfo.connect(ganhoLfo).connect(ganhoVento.gain);
-
-    const ganhoMestre = ctx.createGain();
-    ganhoMestre.gain.value = 1;
-
-    fonteChuva.connect(filtroChuva).connect(ganhoChuva).connect(ganhoMestre);
-    fonteVento.connect(filtroVento).connect(ganhoVento).connect(ganhoMestre);
-    ganhoMestre.connect(ctx.destination);
-
-    const agora = ctx.currentTime;
-    ganhoChuva.gain.setValueAtTime(0, agora);
-    ganhoChuva.gain.linearRampToValueAtTime(0.05, agora + 1.5); // entra bem devagar
-
-    fonteChuva.start(agora);
-    fonteVento.start(agora);
-    lfo.start(agora);
-
-    nosAmbiente = { fonteChuva, fonteVento, lfo, ganhoMestre, ctx };
+    const destino = obterGanhoMestreVolume(ctx);
+    const construirPerfil = PERFIS_AMBIENTE[tipoAmbiente] || PERFIS_AMBIENTE.chuva;
+    nosAmbiente = { ...construirPerfil(ctx, destino), ctx };
   } catch (e) {
     // se o som ambiente falhar por qualquer motivo, o resto do site segue normal
   }
@@ -536,24 +794,35 @@ function iniciarAmbiente() {
 function pararAmbiente() {
   if (!nosAmbiente) return;
   try {
-    const { fonteChuva, fonteVento, lfo, ganhoMestre, ctx } = nosAmbiente;
+    const { fontes, ganhoPerfil, aoParar, ctx } = nosAmbiente;
+    if (aoParar) aoParar();
     const agora = ctx.currentTime;
     // some suavemente em vez de cortar seco, pra não dar um "clique" no ouvido
-    ganhoMestre.gain.setValueAtTime(ganhoMestre.gain.value, agora);
-    ganhoMestre.gain.linearRampToValueAtTime(0, agora + 0.4);
+    ganhoPerfil.gain.setValueAtTime(ganhoPerfil.gain.value, agora);
+    ganhoPerfil.gain.linearRampToValueAtTime(0, agora + 0.4);
     setTimeout(() => {
-      try {
-        fonteChuva.stop();
-        fonteVento.stop();
-        lfo.stop();
-      } catch (e2) {
-        // pode já ter parado sozinho — sem problema
-      }
+      fontes.forEach(no => {
+        try { no.stop(); } catch (e2) {
+          // pode já ter parado sozinho — sem problema
+        }
+      });
     }, 450);
   } catch (e) {
     // ignora
   }
   nosAmbiente = null;
+}
+
+function trocarPerfilAmbiente(novoTipo) {
+  tipoAmbiente = novoTipo;
+  salvarTipoAmbiente(tipoAmbiente);
+  atualizarBotoesSom();
+  if (nosAmbiente) {
+    // troca ao vivo: desliga o perfil atual com um fade e liga o novo logo em seguida,
+    // sem precisar desligar o botão principal nem perder o estado "ligado"
+    pararAmbiente();
+    setTimeout(() => { if (ambienteAtivado) iniciarAmbiente(); }, 420);
+  }
 }
 
 // tenta iniciar o ambiente assim que a pessoa interagir pela primeira vez
